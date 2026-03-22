@@ -126,6 +126,15 @@ class DatabaseSetupService
                     "UPDATE transactions SET account_name = COALESCE((SELECT name FROM accounts ORDER BY id ASC LIMIT 1), 'Unassigned') WHERE account_name IS NULL OR account_name = ''"
                 ],
             ],
+            [
+                'id' => '20260322_0007_transaction_pairing',
+                'statements' => [
+                    "DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = 'transactions' AND column_name = 'paired_account_name') THEN ALTER TABLE transactions ADD COLUMN paired_account_name VARCHAR(150) NOT NULL DEFAULT ''; END IF; END $$",
+                    "DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = 'transactions' AND column_name = 'paired_category') THEN ALTER TABLE transactions ADD COLUMN paired_category VARCHAR(120) NOT NULL DEFAULT ''; END IF; END $$",
+                    "UPDATE transactions SET paired_account_name = '' WHERE paired_account_name IS NULL",
+                    "UPDATE transactions SET paired_category = '' WHERE paired_category IS NULL"
+                ],
+            ],
         ];
     }
 

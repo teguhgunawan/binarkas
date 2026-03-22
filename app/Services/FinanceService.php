@@ -99,6 +99,7 @@ class FinanceService
             }
             return true;
         }));
+        $rows = $this->enrichJournalRows($rows);
 
         $grouped = $this->groupTransactionsByDate($rows);
 
@@ -312,6 +313,8 @@ class FinanceService
         $title = trim((string) ($input['title'] ?? ''));
         $accountName = trim((string) ($input['account_name'] ?? ''));
         $category = trim((string) ($input['category'] ?? ''));
+        $pairedAccountName = trim((string) ($input['paired_account_name'] ?? ''));
+        $pairedCategory = trim((string) ($input['paired_category'] ?? ''));
         $type = trim((string) ($input['type'] ?? ''));
         $amountRaw = str_replace([',', ' '], '', (string) ($input['amount'] ?? '0'));
         $errors = [];
@@ -328,8 +331,14 @@ class FinanceService
         if (!$this->accountExists($accountName)) {
             $errors['account_name'] = 'Selected account is invalid.';
         }
+        if ($pairedAccountName !== '' && !$this->accountExists($pairedAccountName)) {
+            $errors['paired_account_name'] = 'Paired account is invalid.';
+        }
         if (mb_strlen($category) < 2) {
             $errors['category'] = 'Category must be at least 2 characters.';
+        }
+        if ($pairedCategory !== '' && !$this->categoryExists($pairedCategory)) {
+            $errors['paired_category'] = 'Paired category is invalid.';
         }
         if (!in_array($type, transaction_type_options(), true)) {
             $errors['type'] = 'Invalid transaction type.';
@@ -344,7 +353,16 @@ class FinanceService
             throw new InvalidArgumentException(json_encode($errors, JSON_THROW_ON_ERROR));
         }
 
-        return ['date' => $date, 'title' => $title, 'account_name' => $accountName, 'category' => $category, 'type' => $type, 'amount' => (float) $amountRaw];
+        return [
+            'date' => $date,
+            'title' => $title,
+            'account_name' => $accountName,
+            'category' => $category,
+            'paired_account_name' => $pairedAccountName,
+            'paired_category' => $pairedCategory,
+            'type' => $type,
+            'amount' => (float) $amountRaw,
+        ];
     }
 
     private function validateBudgetPayload(array $input): array
@@ -465,6 +483,19 @@ class FinanceService
         return false;
     }
 
+    private function categoryExists(string $name): bool
+    {
+        foreach ($this->repository->categories() as $category) {
+            if (empty($category['is_active'])) {
+                continue;
+            }
+            if (strcasecmp((string) $category['name'], $name) === 0) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private function accountExists(string $name): bool
     {
         foreach ($this->repository->accounts() as $account) {
@@ -489,6 +520,67 @@ class FinanceService
             $grouped[$key][] = $row;
         }
         return $grouped;
+    }
+
+    private function enrichJournalRows(array $rows): array
+    {
+        $sorted = $rows;
+        usort($sorted, static function (array $a, array $b): int {
+            $dateA = (string) ($a['date'] ?? '');
+            $dateB = (string) ($b['date'] ?? '');
+            if ($dateA !== $dateB) {
+                return $dateA <=> $dateB;
+            }
+            return (int) ($a['id'] ?? 0) <=> (int) ($b['id'] ?? 0);
+        });
+
+        $runningByAccount = [];
+        $enrichedByKey = [];
+
+        foreach ($sorted as $row) {
+            $accountName = (string) ($row['account_name'] ?? 'Unassigned');
+            $amount = (float) ($row['amount'] ?? 0);
+            $type = (string) ($row['type'] ?? 'expense');
+
+            $debit = 0.0;
+            $credit = 0.0;
+
+            if ($type === 'income') {
+                $credit = $amount;
+            } else {
+                $debit = $amount;
+            }
+
+            $delta = $credit - $debit;
+            $runningByAccount[$accountName] = ($runningByAccount[$accountName] ?? 0.0) + $delta;
+
+            $row['debit'] = $debit;
+            $row['credit'] = $credit;
+            $row['balance'] = $runningByAccount[$accountName];
+            $row['paired_account_name'] = (string) ($row['paired_account_name'] ?? '');
+            $row['paired_category'] = (string) ($row['paired_category'] ?? '');
+
+            $enrichedByKey[$this->ledgerRowKey($row)] = $row;
+        }
+
+        $result = [];
+        foreach ($rows as $row) {
+            $key = $this->ledgerRowKey($row);
+            $result[] = $enrichedByKey[$key] ?? $row;
+        }
+
+        return $result;
+    }
+
+    private function ledgerRowKey(array $row): string
+    {
+        return implode('|', [
+            (string) ($row['id'] ?? ''),
+            (string) ($row['date'] ?? ''),
+            (string) ($row['title'] ?? ''),
+            (string) ($row['account_name'] ?? ''),
+            (string) ($row['amount'] ?? ''),
+        ]);
     }
 
     private function normalizeActiveFlag(mixed $value, bool $default): bool

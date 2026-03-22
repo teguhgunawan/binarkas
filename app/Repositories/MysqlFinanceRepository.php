@@ -210,7 +210,9 @@ class MysqlFinanceRepository
     public function transactions(): array
     {
         $accountExpr = $this->hasColumn('transactions', 'account_name') ? "COALESCE(account_name, '')" : "''";
-        $sql = "SELECT id, transaction_date AS date, title, {$accountExpr} AS account_name, category, type, amount FROM transactions ORDER BY transaction_date DESC, id DESC";
+        $pairedAccountExpr = $this->hasColumn('transactions', 'paired_account_name') ? "COALESCE(paired_account_name, '')" : "''";
+        $pairedCategoryExpr = $this->hasColumn('transactions', 'paired_category') ? "COALESCE(paired_category, '')" : "''";
+        $sql = "SELECT id, transaction_date AS date, title, {$accountExpr} AS account_name, category, {$pairedAccountExpr} AS paired_account_name, {$pairedCategoryExpr} AS paired_category, type, amount FROM transactions ORDER BY transaction_date DESC, id DESC";
         return $this->pdo->query($sql)->fetchAll() ?: [];
     }
 
@@ -231,6 +233,16 @@ class MysqlFinanceRepository
             $placeholders[] = ':account_name';
             $params['account_name'] = $payload['account_name'];
         }
+        if ($this->hasColumn('transactions', 'paired_account_name')) {
+            $columns[] = 'paired_account_name';
+            $placeholders[] = ':paired_account_name';
+            $params['paired_account_name'] = $payload['paired_account_name'] ?? '';
+        }
+        if ($this->hasColumn('transactions', 'paired_category')) {
+            $columns[] = 'paired_category';
+            $placeholders[] = ':paired_category';
+            $params['paired_category'] = $payload['paired_category'] ?? '';
+        }
 
         $sql = 'INSERT INTO transactions (' . implode(', ', $columns) . ') VALUES (' . implode(', ', $placeholders) . ')';
         $statement = $this->pdo->prepare($sql);
@@ -244,6 +256,12 @@ class MysqlFinanceRepository
         if ($this->hasColumn('transactions', 'account_name')) {
             $sets[] = 'account_name = :account_name';
         }
+        if ($this->hasColumn('transactions', 'paired_account_name')) {
+            $sets[] = 'paired_account_name = :paired_account_name';
+        }
+        if ($this->hasColumn('transactions', 'paired_category')) {
+            $sets[] = 'paired_category = :paired_category';
+        }
         $sql = 'UPDATE transactions SET ' . implode(', ', $sets) . ' WHERE id = :id';
         $statement = $this->pdo->prepare($sql);
         $params = [
@@ -256,6 +274,12 @@ class MysqlFinanceRepository
         ];
         if ($this->hasColumn('transactions', 'account_name')) {
             $params['account_name'] = $payload['account_name'];
+        }
+        if ($this->hasColumn('transactions', 'paired_account_name')) {
+            $params['paired_account_name'] = $payload['paired_account_name'] ?? '';
+        }
+        if ($this->hasColumn('transactions', 'paired_category')) {
+            $params['paired_category'] = $payload['paired_category'] ?? '';
         }
         $statement->execute($params);
         return $statement->rowCount() > 0;

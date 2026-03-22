@@ -47,16 +47,6 @@ if (empty($groupedRows) && !empty($rows)) {
             <input type="text" name="keyword" class="form-control rounded-4" placeholder="Cari judul, kategori, akun, nominal" value="<?= htmlspecialchars((string) ($filters['keyword'] ?? '')) ?>">
         </div>
         <button type="submit" class="btn btn-outline-dark rounded-3 px-3"><i class="bi bi-funnel me-1"></i>Filter</button>
-        <button
-            type="button"
-            class="btn btn-dark rounded-3 px-3"
-            data-create-transaction
-            data-filter-account="<?= htmlspecialchars($selectedAccount) ?>"
-            data-filter-date-from="<?= htmlspecialchars((string) ($filters['date_from'] ?? date('Y-m-01'))) ?>"
-            data-filter-date-to="<?= htmlspecialchars((string) ($filters['date_to'] ?? date('Y-m-d'))) ?>"
-            data-filter-keyword="<?= htmlspecialchars((string) ($filters['keyword'] ?? '')) ?>"
-            data-default-account="<?= htmlspecialchars($defaultAccountForCreate) ?>"
-        ><i class="bi bi-plus-lg"></i></button>
     </form>
 </section>
 
@@ -73,8 +63,9 @@ if (empty($groupedRows) && !empty($rows)) {
             <div>Account</div>
             <div>Transaksi</div>
             <div>Kategori</div>
-            <div>Tipe</div>
-            <div class="text-end">Nominal</div>
+            <div class="text-end">Debet</div>
+            <div class="text-end">Kredit</div>
+            <div class="text-end">Saldo</div>
             <div class="text-end">Aksi</div>
         </div>
         <div class="accordion mt-2" id="accountsAccordion">
@@ -93,10 +84,19 @@ if (empty($groupedRows) && !empty($rows)) {
                             <?php foreach ($dateRows as $item): ?>
                                 <div class="accounts-grid-row">
                                     <div><?= htmlspecialchars((string) ($item['account_name'] ?? '-')) ?></div>
-                                    <div><?= htmlspecialchars((string) ($item['title'] ?? '-')) ?></div>
-                                    <div><?= htmlspecialchars((string) ($item['category'] ?? '-')) ?></div>
-                                    <div><span class="badge text-bg-<?= htmlspecialchars(transaction_badge_class((string) ($item['type'] ?? ''))) ?>"><?= htmlspecialchars(ucfirst((string) ($item['type'] ?? '-'))) ?></span></div>
-                                    <div class="text-end fw-semibold"><?= htmlspecialchars(format_idr((float) ($item['amount'] ?? 0))) ?></div>
+                                    <div>
+                                        <div><?= htmlspecialchars((string) ($item['title'] ?? '-')) ?></div>
+                                        <?php if (!empty($item['paired_account_name']) || !empty($item['paired_category'])): ?>
+                                            <div class="text-muted small">Pair: <?= htmlspecialchars((string) ($item['paired_account_name'] ?? '-')) ?> / <?= htmlspecialchars((string) ($item['paired_category'] ?? '-')) ?></div>
+                                        <?php endif; ?>
+                                    </div>
+                                    <div>
+                                        <span class="badge text-bg-<?= htmlspecialchars(transaction_badge_class((string) ($item['type'] ?? ''))) ?> me-1"><?= htmlspecialchars(ucfirst((string) ($item['type'] ?? '-'))) ?></span>
+                                        <?= htmlspecialchars((string) ($item['category'] ?? '-')) ?>
+                                    </div>
+                                    <div class="text-end fw-semibold text-danger"><?= htmlspecialchars(format_idr((float) ($item['debit'] ?? 0))) ?></div>
+                                    <div class="text-end fw-semibold text-success"><?= htmlspecialchars(format_idr((float) ($item['credit'] ?? 0))) ?></div>
+                                    <div class="text-end fw-semibold"><?= htmlspecialchars(format_idr((float) ($item['balance'] ?? 0))) ?></div>
                                     <div class="accounts-actions">
                                         <button
                                             type="button"
@@ -108,6 +108,8 @@ if (empty($groupedRows) && !empty($rows)) {
                                             data-type="<?= htmlspecialchars((string) ($item['type'] ?? 'expense')) ?>"
                                             data-account-name="<?= htmlspecialchars((string) ($item['account_name'] ?? '')) ?>"
                                             data-category="<?= htmlspecialchars((string) ($item['category'] ?? '')) ?>"
+                                            data-paired-account-name="<?= htmlspecialchars((string) ($item['paired_account_name'] ?? '')) ?>"
+                                            data-paired-category="<?= htmlspecialchars((string) ($item['paired_category'] ?? '')) ?>"
                                             data-amount="<?= htmlspecialchars((string) ($item['amount'] ?? '0')) ?>"
                                             data-filter-account="<?= htmlspecialchars($selectedAccount) ?>"
                                             data-filter-date-from="<?= htmlspecialchars((string) ($filters['date_from'] ?? date('Y-m-01'))) ?>"
@@ -134,6 +136,20 @@ if (empty($groupedRows) && !empty($rows)) {
         </div>
     <?php endif; ?>
 </section>
+
+<button
+    type="button"
+    class="fab-transaction"
+    title="Tambah transaksi"
+    data-create-transaction
+    data-filter-account="<?= htmlspecialchars($selectedAccount) ?>"
+    data-filter-date-from="<?= htmlspecialchars((string) ($filters['date_from'] ?? date('Y-m-01'))) ?>"
+    data-filter-date-to="<?= htmlspecialchars((string) ($filters['date_to'] ?? date('Y-m-d'))) ?>"
+    data-filter-keyword="<?= htmlspecialchars((string) ($filters['keyword'] ?? '')) ?>"
+    data-default-account="<?= htmlspecialchars($defaultAccountForCreate) ?>"
+>
+    <i class="bi bi-plus-lg"></i>
+</button>
 
 <div class="modal fade" id="accountPickerModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-scrollable">
@@ -217,6 +233,25 @@ if (empty($groupedRows) && !empty($rows)) {
                 <div class="col-12">
                     <label class="form-label">Amount</label>
                     <input type="text" id="tx-sheet-amount" name="amount" class="form-control rounded-4">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Akun Pair (Opsional)</label>
+                    <select id="tx-sheet-paired-account" name="paired_account_name" class="form-select rounded-4">
+                        <option value="">- Tanpa Pair -</option>
+                        <?php foreach ($accounts as $account): ?>
+                            <?php $accountName = (string) ($account['name'] ?? ''); ?>
+                            <option value="<?= htmlspecialchars($accountName) ?>"><?= htmlspecialchars($accountName) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Kategori Pair (Opsional)</label>
+                    <select id="tx-sheet-paired-category" name="paired_category" class="form-select rounded-4">
+                        <option value="">- Tanpa Pair -</option>
+                        <?php foreach ($categories as $category): ?>
+                            <option value="<?= htmlspecialchars((string) ($category['name'] ?? '')) ?>"><?= htmlspecialchars((string) ($category['name'] ?? '')) ?></option>
+                        <?php endforeach; ?>
+                    </select>
                 </div>
             </div>
             <div class="modal-footer border-0 pt-2">

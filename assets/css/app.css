@@ -251,7 +251,7 @@ body.sidebar-hidden .sidebar-panel {
 
 .accounts-filter-bar {
     display: grid;
-    grid-template-columns: minmax(220px, 1fr) repeat(2, minmax(160px, 220px)) minmax(220px, 1fr) auto auto;
+    grid-template-columns: minmax(220px, 1fr) repeat(2, minmax(160px, 220px)) minmax(220px, 1fr) auto;
     gap: 0.75rem;
     align-items: end;
 }
@@ -259,7 +259,7 @@ body.sidebar-hidden .sidebar-panel {
 .accounts-grid-header,
 .accounts-grid-row {
     display: grid;
-    grid-template-columns: 1.2fr 1.6fr 1.2fr 0.9fr 1fr 96px;
+    grid-template-columns: 1.1fr 1.4fr 1.2fr 1fr 1fr 1fr 96px;
     gap: 0.75rem;
     align-items: center;
 }
@@ -311,6 +311,27 @@ body.sidebar-hidden .sidebar-panel {
 
 .tx-action-danger:hover {
     background: rgba(239, 68, 68, 0.12);
+}
+
+.fab-transaction {
+    position: fixed;
+    right: 1.4rem;
+    bottom: 1.4rem;
+    width: 3.1rem;
+    height: 3.1rem;
+    border: 0;
+    border-radius: 999px;
+    background: #0f172a;
+    color: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 12px 24px rgba(15, 23, 42, 0.35);
+    z-index: 1029;
+}
+
+.fab-transaction:hover {
+    background: #1e293b;
 }
 
 .modal.modal-bottom-sheet .modal-dialog {
@@ -385,6 +406,11 @@ body.sidebar-hidden .sidebar-panel {
 
     .modal.modal-bottom-sheet .modal-dialog {
         max-width: 100%;
+    }
+
+    .fab-transaction {
+        right: 1rem;
+        bottom: 1rem;
     }
 
     .setup-grid {
