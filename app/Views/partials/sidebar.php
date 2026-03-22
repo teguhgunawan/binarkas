@@ -1,3 +1,15 @@
+<?php
+$database = $database ?? ['connected' => false, 'schemaReady' => false, 'error' => null];
+$dbClass = 'text-bg-danger';
+$dbLabel = 'DB Disconnected';
+if (!empty($database['connected']) && !empty($database['schemaReady'])) {
+    $dbClass = 'text-bg-success';
+    $dbLabel = 'DB Ready';
+} elseif (!empty($database['connected'])) {
+    $dbClass = 'text-bg-warning text-dark';
+    $dbLabel = 'DB Setup Needed';
+}
+?>
 <aside id="appSidebar" class="sidebar-panel d-flex flex-column justify-content-between p-4">
     <div>
         <div class="d-flex align-items-start justify-content-between mb-4">
@@ -48,5 +60,13 @@
         <div class="small text-uppercase text-white-50">Signed in as</div>
         <div class="fw-semibold"><?= htmlspecialchars($authUser['full_name'] ?? 'Guest') ?></div>
         <div class="text-white-50 small"><?= htmlspecialchars($authUser['role'] ?? 'guest') ?></div>
+        <div class="text-white-50 small mb-2"><?= htmlspecialchars($authUser['email'] ?? '-') ?></div>
+        <span class="badge rounded-pill <?= htmlspecialchars($dbClass) ?> px-3 py-2 mb-2 w-100 text-start"><?= htmlspecialchars($dbLabel) ?></span>
+        <?php if (!empty($database['connected']) && empty($database['schemaReady'])): ?>
+            <a href="<?= htmlspecialchars(app_base('?page=setup')) ?>" class="btn btn-sm btn-outline-light w-100 rounded-3 mb-2">Run Setup</a>
+        <?php endif; ?>
+        <?php if (!empty($authUser)): ?>
+            <a href="<?= htmlspecialchars(app_base('?page=logout')) ?>" class="btn btn-sm btn-light w-100 rounded-3">Logout</a>
+        <?php endif; ?>
     </div>
 </aside>

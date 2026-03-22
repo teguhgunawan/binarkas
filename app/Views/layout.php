@@ -44,7 +44,7 @@ $selectedAccountLabel = $selectedAccountLabel ?? 'Semua Akun';
 </head>
 <body>
 <div class="app-shell">
-    <?php render('partials/sidebar', ['page' => $page, 'config' => $config, 'authUser' => $authUser]); ?>
+    <?php render('partials/sidebar', ['page' => $page, 'config' => $config, 'authUser' => $authUser, 'database' => $database]); ?>
     <button type="button" id="sidebarBackdrop" class="sidebar-backdrop" aria-label="Close Sidebar"></button>
     <main class="content-panel">
         <?php render('partials/topbar', ['page' => $page, 'database' => $database, 'authUser' => $authUser]); ?>

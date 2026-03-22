@@ -8,6 +8,9 @@ $flash = $flash ?? null;
 $selectedAccount = (string) ($filters['account'] ?? '__all');
 $selectedAccountLabel = (string) ($selectedAccountLabel ?? 'Semua Akun');
 $defaultAccountForCreate = $selectedAccount !== '__all' ? $selectedAccount : (string) ($accounts[0]['name'] ?? '');
+$trialBalance = [];
+$totalDebit = 0.0;
+$totalCredit = 0.0;
 
 if (empty($groupedRows) && !empty($rows)) {
     $groupedRows = [];
@@ -18,6 +21,17 @@ if (empty($groupedRows) && !empty($rows)) {
         }
         $groupedRows[$day][] = $row;
     }
+}
+
+foreach ($rows as $row) {
+    $accountName = (string) ($row['account_name'] ?? 'Unassigned');
+    if (!array_key_exists($accountName, $trialBalance)) {
+        $trialBalance[$accountName] = ['debit' => 0.0, 'credit' => 0.0, 'balance' => (float) ($row['balance'] ?? 0)];
+    }
+    $trialBalance[$accountName]['debit'] += (float) ($row['debit'] ?? 0);
+    $trialBalance[$accountName]['credit'] += (float) ($row['credit'] ?? 0);
+    $totalDebit += (float) ($row['debit'] ?? 0);
+    $totalCredit += (float) ($row['credit'] ?? 0);
 }
 ?>
 
@@ -48,6 +62,41 @@ if (empty($groupedRows) && !empty($rows)) {
         </div>
         <button type="submit" class="btn btn-outline-dark rounded-3 px-3"><i class="bi bi-funnel me-1"></i>Filter</button>
     </form>
+</section>
+
+<section class="surface-card mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3 class="h6 mb-0">Ringkasan Buku Besar</h3>
+        <span class="text-muted small">Skala lanjutan: neraca debit/kredit/saldo per akun</span>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0">
+            <thead>
+                <tr>
+                    <th>Akun</th>
+                    <th class="text-end">Debet</th>
+                    <th class="text-end">Kredit</th>
+                    <th class="text-end">Saldo Akhir</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($trialBalance as $accountName => $balance): ?>
+                    <tr>
+                        <td><?= htmlspecialchars($accountName) ?></td>
+                        <td class="text-end text-danger"><?= htmlspecialchars(format_idr((float) $balance['debit'])) ?></td>
+                        <td class="text-end text-success"><?= htmlspecialchars(format_idr((float) $balance['credit'])) ?></td>
+                        <td class="text-end fw-semibold"><?= htmlspecialchars(format_idr((float) $balance['balance'])) ?></td>
+                    </tr>
+                <?php endforeach; ?>
+                <tr class="table-light fw-semibold">
+                    <td>Total</td>
+                    <td class="text-end text-danger"><?= htmlspecialchars(format_idr($totalDebit)) ?></td>
+                    <td class="text-end text-success"><?= htmlspecialchars(format_idr($totalCredit)) ?></td>
+                    <td class="text-end"><?= htmlspecialchars(format_idr($totalCredit - $totalDebit)) ?></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
 </section>
 
 <section class="surface-card">
