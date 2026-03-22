@@ -18,9 +18,9 @@
             <span class="badge rounded-pill text-bg-light px-3 py-2"><?= htmlspecialchars($authUser['email']) ?></span>
             <a href="<?= htmlspecialchars(app_base('?page=logout')) ?>" class="btn btn-outline-secondary rounded-pill px-3">Logout</a>
         <?php endif; ?>
-        <button type="button" class="btn btn-light rounded-pill px-3">Search</button>
-        <a href="<?= htmlspecialchars(app_base('?page=transactions')) ?>" class="btn btn-primary rounded-pill px-4">
-            <i class="bi bi-plus-circle me-1"></i>Tambah Transaksi
+        <button type="button" class="btn btn-light rounded-3 px-3">Search</button>
+        <a href="<?= htmlspecialchars(app_base('?page=transactions')) ?>" class="btn btn-outline-dark rounded-3 px-3" title="Transaksi">
+            <i class="bi bi-plus-lg"></i>
         </a>
     </div>
 </header>

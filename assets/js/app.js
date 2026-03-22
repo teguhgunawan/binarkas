@@ -76,9 +76,10 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
+    const createTxButtons = document.querySelectorAll('[data-create-transaction]');
     const editTxButtons = document.querySelectorAll('[data-edit-transaction]');
-    const editTxModalElement = document.getElementById('transactionEditModal');
-    const editTxModal = editTxModalElement ? bootstrap.Modal.getOrCreateInstance(editTxModalElement) : null;
+    const txSheetModalElement = document.getElementById('transactionSheetModal');
+    const txSheetModal = txSheetModalElement ? bootstrap.Modal.getOrCreateInstance(txSheetModalElement) : null;
     const bindValue = function (selector, value) {
         const el = document.querySelector(selector);
         if (el) {
@@ -86,27 +87,67 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     };
 
+    const openSheetCreate = function (sourceButton) {
+        const today = new Date().toISOString().slice(0, 10);
+        const sheetTitle = document.getElementById('transaction-sheet-title');
+        if (sheetTitle) {
+            sheetTitle.textContent = 'Tambah Transaksi';
+        }
+
+        bindValue('#tx-sheet-action', 'create-transaction');
+        bindValue('#tx-sheet-id', '');
+        bindValue('#tx-sheet-date', today);
+        bindValue('#tx-sheet-title-input', '');
+        bindValue('#tx-sheet-type', 'expense');
+        bindValue('#tx-sheet-amount', '');
+        bindValue('#tx-sheet-filter-account', sourceButton ? sourceButton.dataset.filterAccount : '');
+        bindValue('#tx-sheet-filter-date-from', sourceButton ? sourceButton.dataset.filterDateFrom : '');
+        bindValue('#tx-sheet-filter-date-to', sourceButton ? sourceButton.dataset.filterDateTo : '');
+        bindValue('#tx-sheet-filter-keyword', sourceButton ? sourceButton.dataset.filterKeyword : '');
+        bindValue('#tx-sheet-account', sourceButton ? sourceButton.dataset.defaultAccount : '');
+
+        const typeSelect = document.getElementById('tx-sheet-type');
+        if (typeSelect) {
+            typeSelect.dispatchEvent(new Event('change'));
+        }
+        if (txSheetModal) {
+            txSheetModal.show();
+        }
+    };
+
+    createTxButtons.forEach(function (button) {
+        button.addEventListener('click', function () {
+            openSheetCreate(button);
+        });
+    });
+
     editTxButtons.forEach(function (button) {
         button.addEventListener('click', function () {
-            bindValue('#edit-transaction-id', button.dataset.transactionId);
-            bindValue('#edit-transaction-date', button.dataset.date);
-            bindValue('#edit-transaction-title', button.dataset.title);
-            bindValue('#edit-transaction-type', button.dataset.type);
-            bindValue('#edit-transaction-account', button.dataset.accountName);
-            bindValue('#edit-transaction-category', button.dataset.category);
-            bindValue('#edit-transaction-amount', button.dataset.amount);
-            bindValue('#edit-filter-account', button.dataset.filterAccount);
-            bindValue('#edit-filter-date-from', button.dataset.filterDateFrom);
-            bindValue('#edit-filter-date-to', button.dataset.filterDateTo);
-            bindValue('#edit-filter-keyword', button.dataset.filterKeyword);
+            const sheetTitle = document.getElementById('transaction-sheet-title');
+            if (sheetTitle) {
+                sheetTitle.textContent = 'Edit Transaksi';
+            }
 
-            const typeSelect = document.getElementById('edit-transaction-type');
+            bindValue('#tx-sheet-action', 'update-transaction');
+            bindValue('#tx-sheet-id', button.dataset.transactionId);
+            bindValue('#tx-sheet-date', button.dataset.date);
+            bindValue('#tx-sheet-title-input', button.dataset.title);
+            bindValue('#tx-sheet-type', button.dataset.type);
+            bindValue('#tx-sheet-account', button.dataset.accountName);
+            bindValue('#tx-sheet-amount', button.dataset.amount);
+            bindValue('#tx-sheet-filter-account', button.dataset.filterAccount);
+            bindValue('#tx-sheet-filter-date-from', button.dataset.filterDateFrom);
+            bindValue('#tx-sheet-filter-date-to', button.dataset.filterDateTo);
+            bindValue('#tx-sheet-filter-keyword', button.dataset.filterKeyword);
+
+            const typeSelect = document.getElementById('tx-sheet-type');
             if (typeSelect) {
                 typeSelect.dispatchEvent(new Event('change'));
             }
+            bindValue('#tx-sheet-category', button.dataset.category);
 
-            if (editTxModal) {
-                editTxModal.show();
+            if (txSheetModal) {
+                txSheetModal.show();
             }
         });
     });

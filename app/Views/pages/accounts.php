@@ -7,6 +7,8 @@ $groupedRows = $accountLedgerGroupedRows ?? [];
 $flash = $flash ?? null;
 $selectedAccount = (string) ($filters['account'] ?? '__all');
 $selectedAccountLabel = (string) ($selectedAccountLabel ?? 'Semua Akun');
+$defaultAccountForCreate = $selectedAccount !== '__all' ? $selectedAccount : (string) ($accounts[0]['name'] ?? '');
+
 if (empty($groupedRows) && !empty($rows)) {
     $groupedRows = [];
     foreach ($rows as $row) {
@@ -44,8 +46,17 @@ if (empty($groupedRows) && !empty($rows)) {
             <label class="form-label">Kata Kunci</label>
             <input type="text" name="keyword" class="form-control rounded-4" placeholder="Cari judul, kategori, akun, nominal" value="<?= htmlspecialchars((string) ($filters['keyword'] ?? '')) ?>">
         </div>
-        <button type="submit" class="btn btn-primary rounded-pill px-4"><i class="bi bi-funnel me-1"></i>Filter</button>
-        <a href="<?= htmlspecialchars(app_base('?page=transactions')) ?>" class="btn btn-success rounded-pill px-3"><i class="bi bi-plus-circle me-1"></i>Tambah Transaksi</a>
+        <button type="submit" class="btn btn-outline-dark rounded-3 px-3"><i class="bi bi-funnel me-1"></i>Filter</button>
+        <button
+            type="button"
+            class="btn btn-dark rounded-3 px-3"
+            data-create-transaction
+            data-filter-account="<?= htmlspecialchars($selectedAccount) ?>"
+            data-filter-date-from="<?= htmlspecialchars((string) ($filters['date_from'] ?? date('Y-m-01'))) ?>"
+            data-filter-date-to="<?= htmlspecialchars((string) ($filters['date_to'] ?? date('Y-m-d'))) ?>"
+            data-filter-keyword="<?= htmlspecialchars((string) ($filters['keyword'] ?? '')) ?>"
+            data-default-account="<?= htmlspecialchars($defaultAccountForCreate) ?>"
+        ><i class="bi bi-plus-lg"></i></button>
     </form>
 </section>
 
@@ -87,7 +98,10 @@ if (empty($groupedRows) && !empty($rows)) {
                                     <div><span class="badge text-bg-<?= htmlspecialchars(transaction_badge_class((string) ($item['type'] ?? ''))) ?>"><?= htmlspecialchars(ucfirst((string) ($item['type'] ?? '-'))) ?></span></div>
                                     <div class="text-end fw-semibold"><?= htmlspecialchars(format_idr((float) ($item['amount'] ?? 0))) ?></div>
                                     <div class="accounts-actions">
-                                        <button type="button" class="btn btn-sm btn-outline-primary rounded-circle" data-edit-transaction
+                                        <button
+                                            type="button"
+                                            class="tx-action-btn"
+                                            data-edit-transaction
                                             data-transaction-id="<?= htmlspecialchars((string) ($item['id'] ?? '')) ?>"
                                             data-date="<?= htmlspecialchars((string) ($item['date'] ?? '')) ?>"
                                             data-title="<?= htmlspecialchars((string) ($item['title'] ?? '')) ?>"
@@ -99,9 +113,8 @@ if (empty($groupedRows) && !empty($rows)) {
                                             data-filter-date-from="<?= htmlspecialchars((string) ($filters['date_from'] ?? date('Y-m-01'))) ?>"
                                             data-filter-date-to="<?= htmlspecialchars((string) ($filters['date_to'] ?? date('Y-m-d'))) ?>"
                                             data-filter-keyword="<?= htmlspecialchars((string) ($filters['keyword'] ?? '')) ?>"
-                                            title="Edit transaksi">
-                                            <i class="bi bi-pencil-square"></i>
-                                        </button>
+                                            title="Edit transaksi"
+                                        ><i class="bi bi-pencil"></i></button>
                                         <form method="post" action="<?= htmlspecialchars(app_base('?page=accounts')) ?>" class="d-inline">
                                             <input type="hidden" name="action" value="delete-transaction">
                                             <input type="hidden" name="transaction_id" value="<?= htmlspecialchars((string) ($item['id'] ?? '')) ?>">
@@ -109,9 +122,7 @@ if (empty($groupedRows) && !empty($rows)) {
                                             <input type="hidden" name="date_from" value="<?= htmlspecialchars((string) ($filters['date_from'] ?? date('Y-m-01'))) ?>">
                                             <input type="hidden" name="date_to" value="<?= htmlspecialchars((string) ($filters['date_to'] ?? date('Y-m-d'))) ?>">
                                             <input type="hidden" name="keyword" value="<?= htmlspecialchars((string) ($filters['keyword'] ?? '')) ?>">
-                                            <button type="submit" class="btn btn-sm btn-outline-danger rounded-circle" title="Hapus transaksi" onclick="return confirm('Hapus transaksi ini?');">
-                                                <i class="bi bi-trash"></i>
-                                            </button>
+                                            <button type="submit" class="tx-action-btn tx-action-danger" title="Hapus transaksi" onclick="return confirm('Hapus transaksi ini?');"><i class="bi bi-trash"></i></button>
                                         </form>
                                     </div>
                                 </div>
@@ -147,38 +158,34 @@ if (empty($groupedRows) && !empty($rows)) {
                 </div>
             </div>
             <div class="modal-footer justify-content-between">
-                <a href="<?= htmlspecialchars(app_base('?page=account-management')) ?>" class="btn btn-outline-secondary rounded-pill">
-                    <i class="bi bi-pencil-square me-1"></i>Edit Akun
-                </a>
-                <a href="<?= htmlspecialchars(app_base('?page=account-management')) ?>" class="btn btn-primary rounded-pill">
-                    <i class="bi bi-plus-circle me-1"></i>Tambah Akun
-                </a>
+                <a href="<?= htmlspecialchars(app_base('?page=account-management')) ?>" class="btn btn-outline-secondary rounded-pill"><i class="bi bi-pencil-square me-1"></i>Edit Akun</a>
+                <a href="<?= htmlspecialchars(app_base('?page=account-management')) ?>" class="btn btn-primary rounded-pill"><i class="bi bi-plus-circle me-1"></i>Tambah Akun</a>
             </div>
         </div>
     </div>
 </div>
 
-<div class="modal fade" id="transactionEditModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
-        <form method="post" action="<?= htmlspecialchars(app_base('?page=accounts')) ?>" class="modal-content rounded-4">
-            <div class="modal-header">
-                <h5 class="modal-title">Edit Transaksi</h5>
+<div class="modal fade modal-bottom-sheet" id="transactionSheetModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-scrollable">
+        <form method="post" action="<?= htmlspecialchars(app_base('?page=accounts')) ?>" class="modal-content">
+            <div class="modal-header border-0 pb-2">
+                <h5 class="modal-title" id="transaction-sheet-title">Tambah Transaksi</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body row g-3">
-                <input type="hidden" name="action" value="update-transaction">
-                <input type="hidden" id="edit-transaction-id" name="transaction_id" value="">
-                <input type="hidden" id="edit-filter-account" name="account" value="<?= htmlspecialchars($selectedAccount) ?>">
-                <input type="hidden" id="edit-filter-date-from" name="date_from" value="<?= htmlspecialchars((string) ($filters['date_from'] ?? date('Y-m-01'))) ?>">
-                <input type="hidden" id="edit-filter-date-to" name="date_to" value="<?= htmlspecialchars((string) ($filters['date_to'] ?? date('Y-m-d'))) ?>">
-                <input type="hidden" id="edit-filter-keyword" name="keyword" value="<?= htmlspecialchars((string) ($filters['keyword'] ?? '')) ?>">
+            <div class="modal-body row g-3 pt-0">
+                <input type="hidden" name="action" id="tx-sheet-action" value="create-transaction">
+                <input type="hidden" id="tx-sheet-id" name="transaction_id" value="">
+                <input type="hidden" id="tx-sheet-filter-account" name="account" value="<?= htmlspecialchars($selectedAccount) ?>">
+                <input type="hidden" id="tx-sheet-filter-date-from" name="date_from" value="<?= htmlspecialchars((string) ($filters['date_from'] ?? date('Y-m-01'))) ?>">
+                <input type="hidden" id="tx-sheet-filter-date-to" name="date_to" value="<?= htmlspecialchars((string) ($filters['date_to'] ?? date('Y-m-d'))) ?>">
+                <input type="hidden" id="tx-sheet-filter-keyword" name="keyword" value="<?= htmlspecialchars((string) ($filters['keyword'] ?? '')) ?>">
                 <div class="col-md-6">
                     <label class="form-label">Tanggal</label>
-                    <input type="date" id="edit-transaction-date" name="date" class="form-control rounded-4">
+                    <input type="date" id="tx-sheet-date" name="date" class="form-control rounded-4" value="<?= htmlspecialchars(date('Y-m-d')) ?>">
                 </div>
                 <div class="col-md-6">
                     <label class="form-label">Tipe</label>
-                    <select id="edit-transaction-type" name="type" class="form-select rounded-4" data-category-filter>
+                    <select id="tx-sheet-type" name="type" class="form-select rounded-4" data-category-filter>
                         <?php foreach (transaction_type_options() as $option): ?>
                             <option value="<?= htmlspecialchars($option) ?>"><?= htmlspecialchars(ucfirst($option)) ?></option>
                         <?php endforeach; ?>
@@ -186,20 +193,20 @@ if (empty($groupedRows) && !empty($rows)) {
                 </div>
                 <div class="col-12">
                     <label class="form-label">Judul</label>
-                    <input type="text" id="edit-transaction-title" name="title" class="form-control rounded-4">
+                    <input type="text" id="tx-sheet-title-input" name="title" class="form-control rounded-4">
                 </div>
                 <div class="col-md-6">
                     <label class="form-label">Account</label>
-                    <select id="edit-transaction-account" name="account_name" class="form-select rounded-4">
+                    <select id="tx-sheet-account" name="account_name" class="form-select rounded-4">
                         <?php foreach ($accounts as $account): ?>
                             <?php $accountName = (string) ($account['name'] ?? ''); ?>
-                            <option value="<?= htmlspecialchars($accountName) ?>"><?= htmlspecialchars($accountName) ?></option>
+                            <option value="<?= htmlspecialchars($accountName) ?>" <?= $defaultAccountForCreate === $accountName ? 'selected' : '' ?>><?= htmlspecialchars($accountName) ?></option>
                         <?php endforeach; ?>
                     </select>
                 </div>
                 <div class="col-md-6">
                     <label class="form-label">Kategori</label>
-                    <select id="edit-transaction-category" name="category" class="form-select rounded-4" data-category-target>
+                    <select id="tx-sheet-category" name="category" class="form-select rounded-4" data-category-target>
                         <?php foreach ($categories as $category): ?>
                             <option value="<?= htmlspecialchars((string) ($category['name'] ?? '')) ?>" data-type="<?= htmlspecialchars((string) ($category['type'] ?? 'expense')) ?>">
                                 <?= htmlspecialchars((string) ($category['name'] ?? '')) ?>
@@ -209,12 +216,12 @@ if (empty($groupedRows) && !empty($rows)) {
                 </div>
                 <div class="col-12">
                     <label class="form-label">Amount</label>
-                    <input type="text" id="edit-transaction-amount" name="amount" class="form-control rounded-4">
+                    <input type="text" id="tx-sheet-amount" name="amount" class="form-control rounded-4">
                 </div>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-outline-secondary rounded-pill" data-bs-dismiss="modal">Batal</button>
-                <button type="submit" class="btn btn-primary rounded-pill">Simpan</button>
+            <div class="modal-footer border-0 pt-2">
+                <button type="button" class="btn btn-light rounded-3" data-bs-dismiss="modal">Batal</button>
+                <button type="submit" class="btn btn-dark rounded-3">Simpan</button>
             </div>
         </form>
     </div>

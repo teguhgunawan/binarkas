@@ -14,6 +14,7 @@ class AccountsController
             $action = (string) ($_POST['action'] ?? '');
             try {
                 $result = match ($action) {
+                    'create-transaction' => $this->financeService->createTransaction($_POST),
                     'update-transaction' => $this->financeService->updateTransaction($_POST),
                     'delete-transaction' => $this->financeService->deleteTransaction($_POST),
                     default => ['ok' => false, 'message' => 'Unsupported account action.'],
