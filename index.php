@@ -21,7 +21,7 @@ if ($page === 'logout') { (new AuthController($authService))->logout(); return; 
 if (!$authService->check() && $page !== 'setup') { header('Location: ' . app_base('?page=login')); exit; }
 if ($page === 'setup') { (new SetupController(new DatabaseSetupService($database)))->handle(); return; }
 if ($page === 'settings') { header('Location: ' . app_base('?page=user-management')); exit; }
-if ($page === 'accounts') { header('Location: ' . app_base('?page=account-management')); exit; }
+if ($page === 'accounts') { (new AccountsController($financeService))->handle(); return; }
 if ($page === 'transactions') { (new TransactionsController($financeService))->handle(); return; }
 if ($page === 'budgets') { (new BudgetsController($financeService))->handle(); return; }
 if ($page === 'debts') { (new DebtsController($financeService))->handle(); return; }

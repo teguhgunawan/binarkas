@@ -28,6 +28,7 @@ class TransactionsController
                 $viewData['transactionFormData'] = [
                     'date' => (string) ($_POST['date'] ?? date('Y-m-d')),
                     'title' => (string) ($_POST['title'] ?? ''),
+                    'account_name' => (string) ($_POST['account_name'] ?? ''),
                     'category' => (string) ($_POST['category'] ?? ''),
                     'type' => (string) ($_POST['type'] ?? 'expense'),
                     'amount' => (string) ($_POST['amount'] ?? '0'),

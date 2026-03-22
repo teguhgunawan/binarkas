@@ -1,6 +1,6 @@
 <?php
 $flash = $flash ?? null;
-$formData = $formData ?? ['name' => '', 'account_name' => '', 'type' => 'Bank', 'reference_number' => '', 'icon' => '', 'is_active' => '1', 'balance' => '0'];
+$formData = $formData ?? ['name' => '', 'account_name' => '', 'type' => 'Bank', 'reference_number' => '', 'icon' => '', 'description' => '', 'is_active' => '1', 'balance' => '0'];
 $formErrors = $formErrors ?? [];
 $accounts = $accounts ?? [];
 ?>
@@ -40,6 +40,7 @@ $accounts = $accounts ?? [];
             <div class="col-md-2"><label class="form-label">No. Rek / HP</label><input type="text" name="reference_number" class="form-control rounded-4" value="<?= htmlspecialchars((string) $formData['reference_number']) ?>"></div>
             <div class="col-md-1"><label class="form-label">Icon</label><input type="text" name="icon" class="form-control rounded-4 text-center" value="<?= htmlspecialchars((string) $formData['icon']) ?>"></div>
             <div class="col-md-2"><label class="form-label">Saldo Awal</label><input type="text" name="balance" class="form-control rounded-4 <?= isset($formErrors['balance']) ? 'is-invalid' : '' ?>" value="<?= htmlspecialchars((string) $formData['balance']) ?>"><?php if (isset($formErrors['balance'])): ?><div class="invalid-feedback"><?= htmlspecialchars($formErrors['balance']) ?></div><?php endif; ?></div>
+            <div class="col-md-4"><label class="form-label">Keterangan</label><input type="text" name="description" class="form-control rounded-4" value="<?= htmlspecialchars((string) ($formData['description'] ?? '')) ?>"></div>
             <div class="col-md-2 d-flex align-items-end"><div class="form-check mb-2"><input type="hidden" name="is_active" value="0"><input type="checkbox" class="form-check-input" name="is_active" value="1" <?= ($formData['is_active'] ?? '1') === '1' ? 'checked' : '' ?>><label class="form-check-label">Active</label></div></div>
         </div>
         <div class="mt-4"><button type="submit" class="btn btn-primary rounded-pill px-4">Create Account</button></div>
@@ -58,6 +59,7 @@ $accounts = $accounts ?? [];
                     <th class="setup-col-active">Active?</th>
                     <th>No. Rekening / HP</th>
                     <th>Saldo Awal</th>
+                    <th>Keterangan</th>
                     <th class="setup-col-actions">Action</th>
                 </tr>
             </thead>
@@ -75,6 +77,7 @@ $accounts = $accounts ?? [];
                             <td class="text-center"><input type="hidden" name="is_active" value="0"><input type="checkbox" class="form-check-input" name="is_active" value="1" <?= !empty($account['is_active']) ? 'checked' : '' ?>></td>
                             <td><input type="text" name="reference_number" class="form-control form-control-sm" value="<?= htmlspecialchars((string) ($account['reference_number'] ?? '')) ?>"></td>
                             <td><input type="text" name="balance" class="form-control form-control-sm" value="<?= htmlspecialchars((string) $account['balance']) ?>"></td>
+                            <td><input type="text" name="description" class="form-control form-control-sm" value="<?= htmlspecialchars((string) ($account['description'] ?? '')) ?>"></td>
                             <td>
                                 <div class="d-flex gap-2">
                                     <button type="submit" class="btn btn-sm btn-outline-primary rounded-pill flex-fill">Save</button>

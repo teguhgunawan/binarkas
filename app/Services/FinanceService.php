@@ -23,6 +23,8 @@ class FinanceService
         $debts = $this->repository->debts();
         $summary = $this->repository->dashboardSummary();
 
+        $defaultAccount = (string) ($accounts[0]['name'] ?? '');
+
         return array_merge([
             'page' => $page,
             'config' => config('app'),
@@ -34,12 +36,13 @@ class FinanceService
             'transactions' => $transactions,
             'budgets' => $budgets,
             'debts' => $debts,
+            'users' => [],
             'reportData' => $this->buildReportData($summary, $accounts, $transactions, $budgets, $debts),
             'database' => ['connected' => $status['connected'], 'schemaReady' => $status['schemaReady'], 'empty' => $status['empty'], 'pendingMigrations' => $status['pendingMigrations'], 'error' => $status['error']],
             'flash' => null,
             'formErrors' => [],
-            'formData' => ['name' => '', 'account_name' => '', 'type' => 'Bank', 'reference_number' => '', 'icon' => '', 'is_active' => '1', 'balance' => '0'],
-            'transactionFormData' => ['date' => date('Y-m-d'), 'title' => '', 'category' => '', 'type' => 'expense', 'amount' => '0'],
+            'formData' => ['name' => '', 'account_name' => '', 'type' => 'Bank', 'reference_number' => '', 'icon' => '', 'description' => '', 'is_active' => '1', 'balance' => '0'],
+            'transactionFormData' => ['date' => date('Y-m-d'), 'title' => '', 'account_name' => $defaultAccount, 'category' => '', 'type' => 'expense', 'amount' => '0'],
             'transactionFormErrors' => [],
             'budgetFormData' => ['name' => '', 'allocated' => '0', 'used' => '0'],
             'budgetFormErrors' => [],
@@ -51,7 +54,60 @@ class FinanceService
             'profileFormErrors' => [],
             'userFormData' => ['full_name' => '', 'email' => '', 'role' => 'user', 'password' => '', 'is_active' => '1'],
             'userFormErrors' => [],
+            'accountLedgerFilters' => ['account' => '__all', 'date_from' => date('Y-m-01'), 'date_to' => date('Y-m-d'), 'keyword' => ''],
+            'accountLedgerRows' => $transactions,
+            'accountLedgerGroupedRows' => $this->groupTransactionsByDate($transactions),
+            'selectedAccountLabel' => 'Semua Akun',
         ], $extra);
+    }
+
+    public function buildAccountLedger(array $input): array
+    {
+        $account = trim((string) ($input['account'] ?? '__all'));
+        $dateFrom = trim((string) ($input['date_from'] ?? date('Y-m-01')));
+        $dateTo = trim((string) ($input['date_to'] ?? date('Y-m-d')));
+        $keyword = trim((string) ($input['keyword'] ?? ''));
+
+        if (!$this->isValidDate($dateFrom)) {
+            $dateFrom = date('Y-m-01');
+        }
+        if (!$this->isValidDate($dateTo)) {
+            $dateTo = date('Y-m-d');
+        }
+        if ($dateFrom > $dateTo) {
+            [$dateFrom, $dateTo] = [$dateTo, $dateFrom];
+        }
+
+        $rows = array_values(array_filter($this->repository->transactions(), function (array $item) use ($account, $dateFrom, $dateTo, $keyword): bool {
+            $txDate = (string) ($item['date'] ?? '');
+            if ($txDate < $dateFrom || $txDate > $dateTo) {
+                return false;
+            }
+            if ($account !== '__all' && strcasecmp((string) ($item['account_name'] ?? ''), $account) !== 0) {
+                return false;
+            }
+            if ($keyword !== '') {
+                $haystack = strtolower(implode(' ', [
+                    (string) ($item['title'] ?? ''),
+                    (string) ($item['category'] ?? ''),
+                    (string) ($item['account_name'] ?? ''),
+                    (string) ($item['amount'] ?? ''),
+                ]));
+                if (!str_contains($haystack, strtolower($keyword))) {
+                    return false;
+                }
+            }
+            return true;
+        }));
+
+        $grouped = $this->groupTransactionsByDate($rows);
+
+        return [
+            'filters' => ['account' => $account, 'date_from' => $dateFrom, 'date_to' => $dateTo, 'keyword' => $keyword],
+            'rows' => $rows,
+            'groupedRows' => $grouped,
+            'selectedAccountLabel' => $account === '__all' ? 'Semua Akun' : $account,
+        ];
     }
 
     private function buildReportData(array $summary, array $accounts, array $transactions, array $budgets, array $debts): array
@@ -217,6 +273,7 @@ class FinanceService
         $type = trim((string) ($input['type'] ?? ''));
         $referenceNumber = trim((string) ($input['reference_number'] ?? ''));
         $icon = trim((string) ($input['icon'] ?? ''));
+        $description = trim((string) ($input['description'] ?? ''));
         $balanceRaw = str_replace([',', ' '], '', (string) ($input['balance'] ?? '0'));
         $isActive = $this->normalizeActiveFlag($input['is_active'] ?? null, true);
         $errors = [];
@@ -243,6 +300,7 @@ class FinanceService
             'type' => $type,
             'reference_number' => $referenceNumber,
             'icon' => $icon,
+            'description' => $description,
             'is_active' => $isActive,
             'balance' => (float) $balanceRaw,
         ];
@@ -252,6 +310,7 @@ class FinanceService
     {
         $date = trim((string) ($input['date'] ?? ''));
         $title = trim((string) ($input['title'] ?? ''));
+        $accountName = trim((string) ($input['account_name'] ?? ''));
         $category = trim((string) ($input['category'] ?? ''));
         $type = trim((string) ($input['type'] ?? ''));
         $amountRaw = str_replace([',', ' '], '', (string) ($input['amount'] ?? '0'));
@@ -262,6 +321,12 @@ class FinanceService
         }
         if (mb_strlen($title) < 2) {
             $errors['title'] = 'Title must be at least 2 characters.';
+        }
+        if (mb_strlen($accountName) < 2) {
+            $errors['account_name'] = 'Choose account from dropdown.';
+        }
+        if (!$this->accountExists($accountName)) {
+            $errors['account_name'] = 'Selected account is invalid.';
         }
         if (mb_strlen($category) < 2) {
             $errors['category'] = 'Category must be at least 2 characters.';
@@ -279,7 +344,7 @@ class FinanceService
             throw new InvalidArgumentException(json_encode($errors, JSON_THROW_ON_ERROR));
         }
 
-        return ['date' => $date, 'title' => $title, 'category' => $category, 'type' => $type, 'amount' => (float) $amountRaw];
+        return ['date' => $date, 'title' => $title, 'account_name' => $accountName, 'category' => $category, 'type' => $type, 'amount' => (float) $amountRaw];
     }
 
     private function validateBudgetPayload(array $input): array
@@ -400,6 +465,32 @@ class FinanceService
         return false;
     }
 
+    private function accountExists(string $name): bool
+    {
+        foreach ($this->repository->accounts() as $account) {
+            if (empty($account['is_active'])) {
+                continue;
+            }
+            if (strcasecmp((string) $account['name'], $name) === 0 || strcasecmp((string) ($account['account_name'] ?? ''), $name) === 0) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private function groupTransactionsByDate(array $rows): array
+    {
+        $grouped = [];
+        foreach ($rows as $row) {
+            $key = (string) ($row['date'] ?? 'Unknown Date');
+            if (!array_key_exists($key, $grouped)) {
+                $grouped[$key] = [];
+            }
+            $grouped[$key][] = $row;
+        }
+        return $grouped;
+    }
+
     private function normalizeActiveFlag(mixed $value, bool $default): bool
     {
         if ($value === null || $value === '') {
@@ -415,7 +506,3 @@ class FinanceService
         return $date instanceof DateTime && $date->format('Y-m-d') === $value;
     }
 }
-
-
-
-

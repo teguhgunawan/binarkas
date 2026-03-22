@@ -17,7 +17,7 @@ class SettingsController
                 'confirm_password' => '',
             ],
             'categoryFormData' => ['name' => '', 'type' => 'expense', 'group_name' => 'expense', 'icon' => '', 'is_active' => '1', 'sort_order' => '10'],
-            'formData' => ['name' => '', 'account_name' => '', 'type' => 'Bank', 'reference_number' => '', 'icon' => '', 'is_active' => '1', 'balance' => '0'],
+            'formData' => ['name' => '', 'account_name' => '', 'type' => 'Bank', 'reference_number' => '', 'icon' => '', 'description' => '', 'is_active' => '1', 'balance' => '0'],
             'userFormData' => ['full_name' => '', 'email' => '', 'role' => 'user', 'password' => '', 'is_active' => '1'],
         ];
 
@@ -86,6 +86,7 @@ class SettingsController
                         'type' => (string) ($_POST['type'] ?? 'Bank'),
                         'reference_number' => (string) ($_POST['reference_number'] ?? ''),
                         'icon' => (string) ($_POST['icon'] ?? ''),
+                        'description' => (string) ($_POST['description'] ?? ''),
                         'is_active' => (string) ($_POST['is_active'] ?? '0'),
                         'balance' => (string) ($_POST['balance'] ?? '0'),
                     ];

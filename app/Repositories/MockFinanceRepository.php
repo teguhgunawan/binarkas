@@ -18,10 +18,11 @@ class MockFinanceRepository
     {
         return array_map(static fn (array $account, int $index): array => [
             'id' => 'mock-' . ($index + 1),
-            'account_name' => $account['name'],
-            'reference_number' => '',
-            'icon' => '',
-            'is_active' => true,
+            'account_name' => $account['account_name'] ?? $account['name'],
+            'reference_number' => $account['reference_number'] ?? '',
+            'icon' => $account['icon'] ?? '',
+            'description' => $account['description'] ?? '',
+            'is_active' => $account['is_active'] ?? true,
         ] + $account, $this->data['accounts'], array_keys($this->data['accounts']));
     }
 
@@ -32,12 +33,12 @@ class MockFinanceRepository
     public function categories(): array
     {
         return [
-            ['id' => 'mock-cat-1', 'name' => 'Pendapatan Gaji', 'type' => 'income', 'group_name' => 'income', 'icon' => '??', 'is_active' => true, 'sort_order' => 10],
-            ['id' => 'mock-cat-2', 'name' => 'General Savings', 'type' => 'expense', 'group_name' => 'saving', 'icon' => '??', 'is_active' => true, 'sort_order' => 10],
-            ['id' => 'mock-cat-3', 'name' => 'Saham', 'type' => 'expense', 'group_name' => 'investment', 'icon' => '??', 'is_active' => true, 'sort_order' => 10],
-            ['id' => 'mock-cat-4', 'name' => 'Food', 'type' => 'expense', 'group_name' => 'expense', 'icon' => '??', 'is_active' => true, 'sort_order' => 10],
-            ['id' => 'mock-cat-5', 'name' => 'Bayar Kartu Kredit', 'type' => 'expense', 'group_name' => 'debt_payoff', 'icon' => '??', 'is_active' => true, 'sort_order' => 10],
-            ['id' => 'mock-cat-6', 'name' => 'Transfer', 'type' => 'transfer', 'group_name' => 'transfer', 'icon' => '??', 'is_active' => true, 'sort_order' => 10],
+            ['id' => 'mock-cat-1', 'name' => 'Pendapatan Gaji', 'type' => 'income', 'group_name' => 'income', 'icon' => '', 'is_active' => true, 'sort_order' => 10],
+            ['id' => 'mock-cat-2', 'name' => 'General Savings', 'type' => 'expense', 'group_name' => 'saving', 'icon' => '', 'is_active' => true, 'sort_order' => 10],
+            ['id' => 'mock-cat-3', 'name' => 'Saham', 'type' => 'expense', 'group_name' => 'investment', 'icon' => '', 'is_active' => true, 'sort_order' => 10],
+            ['id' => 'mock-cat-4', 'name' => 'Food', 'type' => 'expense', 'group_name' => 'expense', 'icon' => '', 'is_active' => true, 'sort_order' => 10],
+            ['id' => 'mock-cat-5', 'name' => 'Bayar Kartu Kredit', 'type' => 'expense', 'group_name' => 'debt_payoff', 'icon' => '', 'is_active' => true, 'sort_order' => 10],
+            ['id' => 'mock-cat-6', 'name' => 'Transfer', 'type' => 'transfer', 'group_name' => 'transfer', 'icon' => '', 'is_active' => true, 'sort_order' => 10],
         ];
     }
 

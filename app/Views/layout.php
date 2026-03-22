@@ -27,6 +27,10 @@ $profileFormData = $profileFormData ?? [];
 $profileFormErrors = $profileFormErrors ?? [];
 $userFormData = $userFormData ?? [];
 $userFormErrors = $userFormErrors ?? [];
+$accountLedgerFilters = $accountLedgerFilters ?? [];
+$accountLedgerRows = $accountLedgerRows ?? [];
+$accountLedgerGroupedRows = $accountLedgerGroupedRows ?? [];
+$selectedAccountLabel = $selectedAccountLabel ?? 'Semua Akun';
 ?>
 <!doctype html>
 <html lang="en">
@@ -68,6 +72,10 @@ $userFormErrors = $userFormErrors ?? [];
             'profileFormErrors',
             'userFormData',
             'userFormErrors',
+            'accountLedgerFilters',
+            'accountLedgerRows',
+            'accountLedgerGroupedRows',
+            'selectedAccountLabel',
             'authUser'
         )); ?>
     </main>

@@ -20,6 +20,7 @@ require __DIR__ . '/../app/Services/FinanceService.php';
 require __DIR__ . '/../app/Controllers/PageController.php';
 require __DIR__ . '/../app/Controllers/AuthController.php';
 require __DIR__ . '/../app/Controllers/TransactionsController.php';
+require __DIR__ . '/../app/Controllers/AccountsController.php';
 require __DIR__ . '/../app/Controllers/BudgetsController.php';
 require __DIR__ . '/../app/Controllers/DebtsController.php';
 require __DIR__ . '/../app/Controllers/SettingsController.php';

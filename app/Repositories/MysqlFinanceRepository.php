@@ -24,18 +24,21 @@ class MysqlFinanceRepository
 
     public function accounts(): array
     {
-        return $this->pdo->query("SELECT id, name, COALESCE(account_name, name) AS account_name, type, COALESCE(reference_number, '') AS reference_number, COALESCE(icon, '') AS icon, is_active, balance FROM accounts ORDER BY is_active DESC, type ASC, name ASC")->fetchAll() ?: [];
+        $sql = "SELECT id, name, COALESCE(account_name, name) AS account_name, type, COALESCE(reference_number, '') AS reference_number, COALESCE(icon, '') AS icon, COALESCE(description, '') AS description, is_active, balance FROM accounts ORDER BY is_active DESC, type ASC, name ASC";
+        return $this->pdo->query($sql)->fetchAll() ?: [];
     }
 
     public function createAccount(array $payload): array
     {
-        $statement = $this->pdo->prepare('INSERT INTO accounts (name, account_name, type, reference_number, icon, is_active, balance) VALUES (:name, :account_name, :type, :reference_number, :icon, :is_active, :balance) RETURNING id, name, account_name, type, reference_number, icon, is_active, balance');
+        $sql = 'INSERT INTO accounts (name, account_name, type, reference_number, icon, description, is_active, balance) VALUES (:name, :account_name, :type, :reference_number, :icon, :description, :is_active, :balance) RETURNING id, name, account_name, type, reference_number, icon, description, is_active, balance';
+        $statement = $this->pdo->prepare($sql);
         $statement->execute([
             'name' => $payload['name'],
             'account_name' => $payload['account_name'],
             'type' => $payload['type'],
             'reference_number' => $payload['reference_number'],
             'icon' => $payload['icon'],
+            'description' => $payload['description'],
             'is_active' => !empty($payload['is_active']) ? 'true' : 'false',
             'balance' => $payload['balance'],
         ]);
@@ -44,7 +47,8 @@ class MysqlFinanceRepository
 
     public function updateAccount(int $accountId, array $payload): bool
     {
-        $statement = $this->pdo->prepare('UPDATE accounts SET name = :name, account_name = :account_name, type = :type, reference_number = :reference_number, icon = :icon, is_active = :is_active, balance = :balance WHERE id = :id');
+        $sql = 'UPDATE accounts SET name = :name, account_name = :account_name, type = :type, reference_number = :reference_number, icon = :icon, description = :description, is_active = :is_active, balance = :balance WHERE id = :id';
+        $statement = $this->pdo->prepare($sql);
         $statement->execute([
             'id' => $accountId,
             'name' => $payload['name'],
@@ -52,6 +56,7 @@ class MysqlFinanceRepository
             'type' => $payload['type'],
             'reference_number' => $payload['reference_number'],
             'icon' => $payload['icon'],
+            'description' => $payload['description'],
             'is_active' => !empty($payload['is_active']) ? 'true' : 'false',
             'balance' => $payload['balance'],
         ]);
@@ -67,7 +72,8 @@ class MysqlFinanceRepository
 
     public function categories(): array
     {
-        return $this->pdo->query("SELECT id, name, type, COALESCE(group_name, CASE WHEN type = 'income' THEN 'income' WHEN type = 'transfer' THEN 'transfer' ELSE 'expense' END) AS group_name, COALESCE(icon, '') AS icon, is_active, sort_order FROM categories ORDER BY group_name ASC, sort_order ASC, name ASC")->fetchAll() ?: [];
+        $sql = "SELECT id, name, type, COALESCE(group_name, CASE WHEN type = 'income' THEN 'income' WHEN type = 'transfer' THEN 'transfer' ELSE 'expense' END) AS group_name, COALESCE(icon, '') AS icon, is_active, sort_order FROM categories ORDER BY group_name ASC, sort_order ASC, name ASC";
+        return $this->pdo->query($sql)->fetchAll() ?: [];
     }
 
     public function createCategory(array $payload): array
@@ -108,15 +114,18 @@ class MysqlFinanceRepository
 
     public function transactions(): array
     {
-        return $this->pdo->query('SELECT id, transaction_date AS date, title, category, type, amount FROM transactions ORDER BY transaction_date DESC, id DESC LIMIT 20')->fetchAll() ?: [];
+        $sql = "SELECT id, transaction_date AS date, title, COALESCE(account_name, '') AS account_name, category, type, amount FROM transactions ORDER BY transaction_date DESC, id DESC";
+        return $this->pdo->query($sql)->fetchAll() ?: [];
     }
 
     public function createTransaction(array $payload): array
     {
-        $statement = $this->pdo->prepare('INSERT INTO transactions (transaction_date, title, category, type, amount) VALUES (:date, :title, :category, :type, :amount) RETURNING id, transaction_date AS date, title, category, type, amount');
+        $sql = 'INSERT INTO transactions (transaction_date, title, account_name, category, type, amount) VALUES (:date, :title, :account_name, :category, :type, :amount) RETURNING id, transaction_date AS date, title, account_name, category, type, amount';
+        $statement = $this->pdo->prepare($sql);
         $statement->execute([
             'date' => $payload['date'],
             'title' => $payload['title'],
+            'account_name' => $payload['account_name'],
             'category' => $payload['category'],
             'type' => $payload['type'],
             'amount' => $payload['amount'],
@@ -126,11 +135,13 @@ class MysqlFinanceRepository
 
     public function updateTransaction(int $transactionId, array $payload): bool
     {
-        $statement = $this->pdo->prepare('UPDATE transactions SET transaction_date = :date, title = :title, category = :category, type = :type, amount = :amount WHERE id = :id');
+        $sql = 'UPDATE transactions SET transaction_date = :date, title = :title, account_name = :account_name, category = :category, type = :type, amount = :amount WHERE id = :id';
+        $statement = $this->pdo->prepare($sql);
         $statement->execute([
             'id' => $transactionId,
             'date' => $payload['date'],
             'title' => $payload['title'],
+            'account_name' => $payload['account_name'],
             'category' => $payload['category'],
             'type' => $payload['type'],
             'amount' => $payload['amount'],

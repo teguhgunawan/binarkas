@@ -114,23 +114,16 @@ class DatabaseSetupService
                     "DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = 'categories' AND column_name = 'is_active') THEN ALTER TABLE categories ADD COLUMN is_active BOOLEAN NOT NULL DEFAULT TRUE; END IF; END $$",
                     "DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = 'categories' AND column_name = 'sort_order') THEN ALTER TABLE categories ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0; END IF; END $$",
                     "UPDATE categories SET icon = '' WHERE icon IS NULL",
-                    "UPDATE categories SET group_name = CASE WHEN type = 'income' THEN 'income' WHEN type = 'transfer' THEN 'transfer' ELSE 'expense' END WHERE group_name IS NULL OR group_name = ''",
-                    "INSERT INTO categories (name, type, group_name, icon, is_active, sort_order) SELECT 'Pendapatan Gaji', 'income', 'income', '??', TRUE, 10 WHERE NOT EXISTS (SELECT 1 FROM categories WHERE name = 'Pendapatan Gaji')",
-                    "INSERT INTO categories (name, type, group_name, icon, is_active, sort_order) SELECT 'Pendapatan Usaha', 'income', 'income', '??', TRUE, 20 WHERE NOT EXISTS (SELECT 1 FROM categories WHERE name = 'Pendapatan Usaha')",
-                    "INSERT INTO categories (name, type, group_name, icon, is_active, sort_order) SELECT 'Pendapatan Sampingan', 'income', 'income', '??', TRUE, 30 WHERE NOT EXISTS (SELECT 1 FROM categories WHERE name = 'Pendapatan Sampingan')",
-                    "INSERT INTO categories (name, type, group_name, icon, is_active, sort_order) SELECT 'General Savings', 'expense', 'saving', '??', TRUE, 10 WHERE NOT EXISTS (SELECT 1 FROM categories WHERE name = 'General Savings')",
-                    "INSERT INTO categories (name, type, group_name, icon, is_active, sort_order) SELECT 'Emergency Fund', 'expense', 'saving', '??', TRUE, 20 WHERE NOT EXISTS (SELECT 1 FROM categories WHERE name = 'Emergency Fund')",
-                    "INSERT INTO categories (name, type, group_name, icon, is_active, sort_order) SELECT 'Retirement Savings', 'expense', 'saving', '???', TRUE, 30 WHERE NOT EXISTS (SELECT 1 FROM categories WHERE name = 'Retirement Savings')",
-                    "INSERT INTO categories (name, type, group_name, icon, is_active, sort_order) SELECT 'Saham', 'expense', 'investment', '??', TRUE, 10 WHERE NOT EXISTS (SELECT 1 FROM categories WHERE name = 'Saham')",
-                    "INSERT INTO categories (name, type, group_name, icon, is_active, sort_order) SELECT 'Reksa Dana', 'expense', 'investment', '??', TRUE, 20 WHERE NOT EXISTS (SELECT 1 FROM categories WHERE name = 'Reksa Dana')",
-                    "INSERT INTO categories (name, type, group_name, icon, is_active, sort_order) SELECT 'Emas', 'expense', 'investment', '??', TRUE, 30 WHERE NOT EXISTS (SELECT 1 FROM categories WHERE name = 'Emas')",
-                    "INSERT INTO categories (name, type, group_name, icon, is_active, sort_order) SELECT 'Operasional Toko Harian', 'expense', 'expense', '??', TRUE, 10 WHERE NOT EXISTS (SELECT 1 FROM categories WHERE name = 'Operasional Toko Harian')",
-                    "INSERT INTO categories (name, type, group_name, icon, is_active, sort_order) SELECT 'Kebutuhan Pokok', 'expense', 'expense', '??', TRUE, 20 WHERE NOT EXISTS (SELECT 1 FROM categories WHERE name = 'Kebutuhan Pokok')",
-                    "INSERT INTO categories (name, type, group_name, icon, is_active, sort_order) SELECT 'Transportasi Rumah Tangga', 'expense', 'expense', '??', TRUE, 30 WHERE NOT EXISTS (SELECT 1 FROM categories WHERE name = 'Transportasi Rumah Tangga')",
-                    "INSERT INTO categories (name, type, group_name, icon, is_active, sort_order) SELECT 'Bayar Kartu Kredit', 'expense', 'debt_payoff', '??', TRUE, 10 WHERE NOT EXISTS (SELECT 1 FROM categories WHERE name = 'Bayar Kartu Kredit')",
-                    "INSERT INTO categories (name, type, group_name, icon, is_active, sort_order) SELECT 'Cicilan Bank', 'expense', 'debt_payoff', '??', TRUE, 20 WHERE NOT EXISTS (SELECT 1 FROM categories WHERE name = 'Cicilan Bank')",
-                    "INSERT INTO categories (name, type, group_name, icon, is_active, sort_order) SELECT 'Transfer', 'transfer', 'transfer', '??', TRUE, 10 WHERE NOT EXISTS (SELECT 1 FROM categories WHERE name = 'Transfer' AND type = 'transfer')",
-                    "INSERT INTO categories (name, type, group_name, icon, is_active, sort_order) SELECT 'Adjustment', 'transfer', 'transfer', '??', TRUE, 20 WHERE NOT EXISTS (SELECT 1 FROM categories WHERE name = 'Adjustment')"
+                    "UPDATE categories SET group_name = CASE WHEN type = 'income' THEN 'income' WHEN type = 'transfer' THEN 'transfer' ELSE 'expense' END WHERE group_name IS NULL OR group_name = ''"
+                ],
+            ],
+            [
+                'id' => '20260322_0006_accounts_transactions_refinement',
+                'statements' => [
+                    "DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = 'accounts' AND column_name = 'description') THEN ALTER TABLE accounts ADD COLUMN description TEXT; END IF; END $$",
+                    "UPDATE accounts SET description = '' WHERE description IS NULL",
+                    "DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = 'transactions' AND column_name = 'account_name') THEN ALTER TABLE transactions ADD COLUMN account_name VARCHAR(150) NOT NULL DEFAULT ''; END IF; END $$",
+                    "UPDATE transactions SET account_name = COALESCE((SELECT name FROM accounts ORDER BY id ASC LIMIT 1), 'Unassigned') WHERE account_name IS NULL OR account_name = ''"
                 ],
             ],
         ];
