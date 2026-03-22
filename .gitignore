@@ -1,0 +1,5 @@
+.env
+storage/sessions/*
+!storage/sessions/.gitkeep
+*.log
+tmp-cookies.txt

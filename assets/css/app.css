@@ -1,0 +1,254 @@
+:root {
+    --brand-900: #0f172a;
+    --brand-800: #16213d;
+    --brand-700: #21325b;
+    --accent: #1f8a70;
+    --surface: #f5f7fb;
+}
+
+body {
+    min-height: 100vh;
+    background:
+        radial-gradient(circle at top left, rgba(31, 138, 112, 0.18), transparent 24%),
+        linear-gradient(180deg, #eef3fb 0%, #f8fafc 100%);
+    color: #0f172a;
+}
+
+.app-shell {
+    min-height: 100vh;
+    display: grid;
+    grid-template-columns: 280px 1fr;
+}
+
+.sidebar-panel {
+    background: linear-gradient(180deg, var(--brand-900) 0%, var(--brand-700) 100%);
+    color: #fff;
+    position: sticky;
+    top: 0;
+    min-height: 100vh;
+}
+
+.brand-kicker,
+.eyebrow {
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    font-size: 0.72rem;
+    font-weight: 700;
+}
+
+.nav-link {
+    color: rgba(255, 255, 255, 0.72);
+}
+
+.nav-link:hover,
+.nav-link.active {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.12);
+}
+
+.sidebar-footer {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.content-panel {
+    padding: 2rem;
+}
+
+.topbar,
+.surface-card,
+.metric-card,
+.setup-sheet,
+.surface-subcard {
+    background: rgba(255, 255, 255, 0.8);
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    border-radius: 1.5rem;
+    box-shadow: 0 24px 60px rgba(15, 23, 42, 0.08);
+}
+
+.topbar {
+    padding: 1.25rem 1.5rem;
+}
+
+.surface-card,
+.metric-card,
+.setup-sheet,
+.surface-subcard {
+    padding: 1.5rem;
+}
+
+.surface-subcard {
+    background: rgba(248, 250, 252, 0.92);
+}
+
+.metric-label {
+    display: inline-block;
+    margin-bottom: 0.75rem;
+    color: #64748b;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+}
+
+.metric-card h3 {
+    margin: 0;
+    font-size: 1.8rem;
+    font-weight: 700;
+}
+
+.metric-meta {
+    margin-top: 0.75rem;
+    color: #64748b;
+}
+
+.progress {
+    height: 0.8rem;
+    border-radius: 999px;
+    background: #dbe4f0;
+}
+
+.progress-bar {
+    background: linear-gradient(90deg, #1f8a70 0%, #2bb3a3 100%);
+}
+
+.debt-item,
+.report-placeholder {
+    background: #f8fafc;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+.list-group-item,
+.table > :not(caption) > * > * {
+    border-color: rgba(15, 23, 42, 0.08) !important;
+}
+
+.setup-stat-chip {
+    display: inline-flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    min-width: 7.5rem;
+    padding: 0.85rem 1rem;
+    border-radius: 1rem;
+    background: linear-gradient(135deg, rgba(31, 138, 112, 0.14), rgba(43, 179, 163, 0.1));
+    border: 1px solid rgba(31, 138, 112, 0.15);
+}
+
+.setup-stat-label {
+    color: #64748b;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+}
+
+.setup-sheet {
+    padding: 0;
+    overflow: hidden;
+}
+
+.setup-sheet-header {
+    padding: 1.1rem 1.25rem 0.8rem;
+}
+
+.setup-sheet-hint {
+    color: #475569;
+    font-size: 0.85em;
+    font-weight: 500;
+}
+
+.setup-grid {
+    --bs-table-bg: transparent;
+    margin-bottom: 0;
+    font-size: 0.92rem;
+}
+
+.setup-grid thead th {
+    color: #0f172a;
+    border-bottom-width: 1px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.setup-grid tbody td,
+.setup-grid thead th {
+    padding: 0.55rem 0.6rem;
+}
+
+.setup-grid .form-control,
+.setup-grid .form-select {
+    min-width: 0;
+    border-radius: 0.8rem;
+    border-color: rgba(15, 23, 42, 0.12);
+}
+
+.setup-grid .form-control:focus,
+.setup-grid .form-select:focus {
+    box-shadow: 0 0 0 0.2rem rgba(31, 138, 112, 0.15);
+    border-color: rgba(31, 138, 112, 0.45);
+}
+
+.setup-grid .form-check-input {
+    width: 1.1rem;
+    height: 1.1rem;
+}
+
+.setup-col-icon {
+    width: 4.5rem;
+    text-align: center;
+}
+
+.setup-col-active {
+    width: 5.5rem;
+    text-align: center;
+}
+
+.setup-col-actions {
+    width: 8.5rem;
+}
+
+.setup-create-row td {
+    background: rgba(15, 23, 42, 0.035);
+}
+
+.setup-table-income thead th { background: #66c89a; }
+.setup-table-saving thead th { background: #5d8ce1; color: #fff; }
+.setup-table-investment thead th { background: #f4cf57; }
+.setup-table-expense thead th { background: #ff7a2f; }
+.setup-table-debt thead th { background: #c6a468; }
+.setup-table-transfer thead th { background: #a78bfa; color: #fff; }
+.setup-table-accounts thead th { background: #4bb8ae; }
+
+.setup-table-income tbody tr:nth-child(odd) td { background: rgba(102, 200, 154, 0.08); }
+.setup-table-saving tbody tr:nth-child(odd) td { background: rgba(93, 140, 225, 0.08); }
+.setup-table-investment tbody tr:nth-child(odd) td { background: rgba(244, 207, 87, 0.12); }
+.setup-table-expense tbody tr:nth-child(odd) td { background: rgba(255, 122, 47, 0.08); }
+.setup-table-debt tbody tr:nth-child(odd) td { background: rgba(198, 164, 104, 0.12); }
+.setup-table-transfer tbody tr:nth-child(odd) td { background: rgba(167, 139, 250, 0.08); }
+.setup-table-accounts tbody tr:nth-child(odd) td { background: rgba(75, 184, 174, 0.08); }
+
+@media (max-width: 991.98px) {
+    .app-shell {
+        grid-template-columns: 1fr;
+    }
+
+    .sidebar-panel {
+        position: static;
+        min-height: auto;
+    }
+
+    .content-panel {
+        padding: 1rem;
+    }
+
+    .setup-grid {
+        min-width: 900px;
+    }
+}
+
+.sidebar-group-title {
+    color: rgba(255, 255, 255, 0.55);
+    font-size: 0.78rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    font-weight: 700;
+}
+
