@@ -1,5 +1,9 @@
 <?php
 $database = $database ?? ['connected' => false, 'schemaReady' => false, 'error' => null];
+$books = $books ?? [];
+$activeBookId = $activeBookId ?? null;
+$isGlobalBookScope = $isGlobalBookScope ?? true;
+$activeBookLabel = $activeBookLabel ?? 'Global (Semua Pembukuan)';
 $dbClass = 'text-bg-danger';
 $dbLabel = 'DB Disconnected';
 if (!empty($database['connected']) && !empty($database['schemaReady'])) {
@@ -61,6 +65,22 @@ if (!empty($database['connected']) && !empty($database['schemaReady'])) {
         <div class="fw-semibold"><?= htmlspecialchars($authUser['full_name'] ?? 'Guest') ?></div>
         <div class="text-white-50 small"><?= htmlspecialchars($authUser['role'] ?? 'guest') ?></div>
         <div class="text-white-50 small mb-2"><?= htmlspecialchars($authUser['email'] ?? '-') ?></div>
+        <?php if (!empty($books)): ?>
+            <form method="get" action="<?= htmlspecialchars(app_base()) ?>" class="mb-2">
+                <input type="hidden" name="page" value="<?= htmlspecialchars($page) ?>">
+                <label class="small text-uppercase text-white-50 mb-1">Pembukuan</label>
+                <select name="book_id" class="form-select form-select-sm rounded-3" onchange="this.form.submit()">
+                    <option value="all" <?= $isGlobalBookScope ? 'selected' : '' ?>>Global (Semua)</option>
+                    <?php foreach ($books as $book): ?>
+                        <?php $bookId = (int) ($book['id'] ?? 0); ?>
+                        <option value="<?= htmlspecialchars((string) $bookId) ?>" <?= !$isGlobalBookScope && $activeBookId === $bookId ? 'selected' : '' ?>>
+                            <?= htmlspecialchars((string) ($book['name'] ?? 'Pembukuan')) ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </form>
+            <div class="text-white-50 small mb-2">Aktif: <?= htmlspecialchars($activeBookLabel) ?></div>
+        <?php endif; ?>
         <span class="badge rounded-pill <?= htmlspecialchars($dbClass) ?> px-3 py-2 mb-2 w-100 text-start"><?= htmlspecialchars($dbLabel) ?></span>
         <?php if (!empty($database['connected']) && empty($database['schemaReady'])): ?>
             <a href="<?= htmlspecialchars(app_base('?page=setup')) ?>" class="btn btn-sm btn-outline-light w-100 rounded-3 mb-2">Run Setup</a>

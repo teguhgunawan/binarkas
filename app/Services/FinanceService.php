@@ -16,12 +16,13 @@ class FinanceService
     public function pageData(string $page, array $extra = []): array
     {
         $status = $this->setupService->status();
-        $accounts = $this->repository->accounts();
-        $categories = $this->repository->categories();
-        $transactions = $this->repository->transactions();
-        $budgets = $this->repository->budgets();
-        $debts = $this->repository->debts();
-        $summary = $this->repository->dashboardSummary();
+        $bookContext = $this->resolveBookContext();
+        $accounts = $this->applyBookScope($this->repository->accounts(), $bookContext);
+        $categories = $this->applyBookScope($this->repository->categories(), $bookContext);
+        $transactions = $this->applyBookScope($this->repository->transactions(), $bookContext);
+        $budgets = $this->applyBookScope($this->repository->budgets(), $bookContext);
+        $debts = $this->applyBookScope($this->repository->debts(), $bookContext);
+        $summary = $this->buildScopedSummary($accounts, $transactions, $budgets);
 
         $defaultAccount = (string) ($accounts[0]['name'] ?? '');
 
@@ -37,6 +38,10 @@ class FinanceService
             'budgets' => $budgets,
             'debts' => $debts,
             'users' => [],
+            'books' => $bookContext['books'],
+            'activeBookId' => $bookContext['activeBookId'],
+            'isGlobalBookScope' => $bookContext['isGlobal'],
+            'activeBookLabel' => $bookContext['label'],
             'reportData' => $this->buildReportData($summary, $accounts, $transactions, $budgets, $debts),
             'database' => ['connected' => $status['connected'], 'schemaReady' => $status['schemaReady'], 'empty' => $status['empty'], 'pendingMigrations' => $status['pendingMigrations'], 'error' => $status['error']],
             'flash' => null,
@@ -54,7 +59,7 @@ class FinanceService
             'profileFormErrors' => [],
             'userFormData' => ['full_name' => '', 'email' => '', 'role' => 'user', 'password' => '', 'is_active' => '1'],
             'userFormErrors' => [],
-            'accountLedgerFilters' => ['account' => '__all', 'date_from' => date('Y-m-01'), 'date_to' => date('Y-m-d'), 'keyword' => ''],
+            'accountLedgerFilters' => ['account' => '__all', 'date_from' => date('Y-m-01'), 'date_to' => date('Y-m-d'), 'keyword' => '', 'book_id' => $bookContext['isGlobal'] ? 'all' : (string) ($bookContext['activeBookId'] ?? '')],
             'accountLedgerRows' => $transactions,
             'accountLedgerGroupedRows' => $this->groupTransactionsByDate($transactions),
             'selectedAccountLabel' => 'Semua Akun',
@@ -63,6 +68,7 @@ class FinanceService
 
     public function buildAccountLedger(array $input): array
     {
+        $bookContext = $this->resolveBookContext();
         $account = trim((string) ($input['account'] ?? '__all'));
         $dateFrom = trim((string) ($input['date_from'] ?? date('Y-m-01')));
         $dateTo = trim((string) ($input['date_to'] ?? date('Y-m-d')));
@@ -78,7 +84,8 @@ class FinanceService
             [$dateFrom, $dateTo] = [$dateTo, $dateFrom];
         }
 
-        $rows = array_values(array_filter($this->repository->transactions(), function (array $item) use ($account, $dateFrom, $dateTo, $keyword): bool {
+        $sourceRows = $this->applyBookScope($this->repository->transactions(), $bookContext);
+        $rows = array_values(array_filter($sourceRows, function (array $item) use ($account, $dateFrom, $dateTo, $keyword): bool {
             $txDate = (string) ($item['date'] ?? '');
             if ($txDate < $dateFrom || $txDate > $dateTo) {
                 return false;
@@ -104,7 +111,7 @@ class FinanceService
         $grouped = $this->groupTransactionsByDate($rows);
 
         return [
-            'filters' => ['account' => $account, 'date_from' => $dateFrom, 'date_to' => $dateTo, 'keyword' => $keyword],
+            'filters' => ['account' => $account, 'date_from' => $dateFrom, 'date_to' => $dateTo, 'keyword' => $keyword, 'book_id' => $bookContext['isGlobal'] ? 'all' : (string) ($bookContext['activeBookId'] ?? '')],
             'rows' => $rows,
             'groupedRows' => $grouped,
             'selectedAccountLabel' => $account === '__all' ? 'Semua Akun' : $account,
@@ -137,9 +144,131 @@ class FinanceService
         ];
     }
 
+    private function buildScopedSummary(array $accounts, array $transactions, array $budgets): array
+    {
+        $netWorth = 0.0;
+        foreach ($accounts as $account) {
+            if (!empty($account['is_active'])) {
+                $netWorth += (float) ($account['balance'] ?? 0);
+            }
+        }
+
+        $income = 0.0;
+        $expense = 0.0;
+        foreach ($transactions as $item) {
+            $amount = (float) ($item['amount'] ?? 0);
+            $type = (string) ($item['type'] ?? '');
+            if ($type === 'income') {
+                $income += $amount;
+            } elseif ($type === 'expense') {
+                $expense += $amount;
+            }
+        }
+
+        $allocated = 0.0;
+        $used = 0.0;
+        foreach ($budgets as $budget) {
+            $allocated += (float) ($budget['allocated'] ?? 0);
+            $used += (float) ($budget['used'] ?? 0);
+        }
+
+        return [
+            'netWorth' => $netWorth,
+            'monthlyIncome' => $income,
+            'monthlyExpense' => $expense,
+            'budgetUsedPercent' => $allocated > 0 ? (int) round(($used / $allocated) * 100) : 0,
+        ];
+    }
+
+    private function resolveBookContext(): array
+    {
+        $userId = $this->currentUserId();
+        $books = method_exists($this->repository, 'booksForUser') ? $this->repository->booksForUser($userId) : [];
+        $requestedRaw = $_POST['book_id'] ?? $_GET['book_id'] ?? ($_SESSION['active_book_id'] ?? null);
+
+        if ($books === []) {
+            return [
+                'books' => [],
+                'activeBookId' => null,
+                'writeBookId' => 0,
+                'isGlobal' => true,
+                'label' => 'Global (Semua Pembukuan)',
+            ];
+        }
+
+        $bookIds = array_map(static fn (array $book): int => (int) ($book['id'] ?? 0), $books);
+        $defaultBookId = null;
+        foreach ($books as $book) {
+            if (!empty($book['is_default'])) {
+                $defaultBookId = (int) ($book['id'] ?? 0);
+                break;
+            }
+        }
+        if ($defaultBookId === null) {
+            $defaultBookId = (int) ($books[0]['id'] ?? 0);
+        }
+
+        $isGlobal = false;
+        $activeBookId = $defaultBookId;
+
+        if ($requestedRaw === 'all' || $requestedRaw === '__all') {
+            $isGlobal = true;
+            $_SESSION['active_book_id'] = 'all';
+        } else {
+            $candidate = (int) $requestedRaw;
+            if ($candidate > 0 && in_array($candidate, $bookIds, true)) {
+                $activeBookId = $candidate;
+            }
+            $_SESSION['active_book_id'] = $activeBookId;
+        }
+
+        $label = 'Global (Semua Pembukuan)';
+        if (!$isGlobal) {
+            foreach ($books as $book) {
+                if ((int) ($book['id'] ?? 0) === $activeBookId) {
+                    $label = (string) ($book['name'] ?? 'Pembukuan');
+                    break;
+                }
+            }
+        }
+
+        return [
+            'books' => $books,
+            'activeBookId' => $activeBookId,
+            'writeBookId' => $activeBookId,
+            'isGlobal' => $isGlobal,
+            'label' => $label,
+        ];
+    }
+
+    private function applyBookScope(array $rows, array $bookContext): array
+    {
+        if (!empty($bookContext['isGlobal']) || empty($bookContext['activeBookId'])) {
+            return $rows;
+        }
+
+        $activeBookId = (int) $bookContext['activeBookId'];
+        return array_values(array_filter($rows, static function (array $row) use ($activeBookId): bool {
+            $rowBookId = (int) ($row['book_id'] ?? 0);
+            return $rowBookId === 0 || $rowBookId === $activeBookId;
+        }));
+    }
+
+    private function currentUserId(): int
+    {
+        $user = $_SESSION['auth_user'] ?? null;
+        if (!is_array($user)) {
+            return 0;
+        }
+
+        return (int) ($user['id'] ?? 0);
+    }
+
     public function createAccount(array $input): array
     {
-        $this->repository->createAccount($this->validateAccountPayload($input));
+        $payload = $this->validateAccountPayload($input);
+        $payload['book_id'] = $this->resolveBookContext()['writeBookId'];
+        $this->repository->createAccount($payload);
         return ['ok' => true, 'message' => 'Account created successfully.'];
     }
 
@@ -165,7 +294,9 @@ class FinanceService
 
     public function createTransaction(array $input): array
     {
-        $this->repository->createTransaction($this->validateTransactionPayload($input));
+        $payload = $this->validateTransactionPayload($input);
+        $payload['book_id'] = $this->resolveBookContext()['writeBookId'];
+        $this->repository->createTransaction($payload);
         return ['ok' => true, 'message' => 'Transaction created successfully.'];
     }
 
@@ -191,7 +322,9 @@ class FinanceService
 
     public function createBudget(array $input): array
     {
-        $this->repository->createBudget($this->validateBudgetPayload($input));
+        $payload = $this->validateBudgetPayload($input);
+        $payload['book_id'] = $this->resolveBookContext()['writeBookId'];
+        $this->repository->createBudget($payload);
         return ['ok' => true, 'message' => 'Budget created successfully.'];
     }
 
@@ -217,7 +350,9 @@ class FinanceService
 
     public function createDebt(array $input): array
     {
-        $this->repository->createDebt($this->validateDebtPayload($input));
+        $payload = $this->validateDebtPayload($input);
+        $payload['book_id'] = $this->resolveBookContext()['writeBookId'];
+        $this->repository->createDebt($payload);
         return ['ok' => true, 'message' => 'Debt created successfully.'];
     }
 
@@ -243,7 +378,9 @@ class FinanceService
 
     public function createCategory(array $input): array
     {
-        $this->repository->createCategory($this->validateCategoryPayload($input));
+        $payload = $this->validateCategoryPayload($input);
+        $payload['book_id'] = $this->resolveBookContext()['writeBookId'];
+        $this->repository->createCategory($payload);
         return ['ok' => true, 'message' => 'Category created successfully.'];
     }
 

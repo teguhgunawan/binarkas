@@ -33,6 +33,7 @@ class AccountsController
             'date_from' => (string) ($source['date_from'] ?? date('Y-m-01')),
             'date_to' => (string) ($source['date_to'] ?? date('Y-m-d')),
             'keyword' => (string) ($source['keyword'] ?? ''),
+            'book_id' => (string) ($source['book_id'] ?? ''),
         ];
 
         $ledger = $this->financeService->buildAccountLedger($input);

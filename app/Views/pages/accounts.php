@@ -8,6 +8,9 @@ $flash = $flash ?? null;
 $selectedAccount = (string) ($filters['account'] ?? '__all');
 $selectedAccountLabel = (string) ($selectedAccountLabel ?? 'Semua Akun');
 $defaultAccountForCreate = $selectedAccount !== '__all' ? $selectedAccount : (string) ($accounts[0]['name'] ?? '');
+$isGlobalBookScope = $isGlobalBookScope ?? true;
+$activeBookId = $activeBookId ?? null;
+$currentBookFilter = $isGlobalBookScope ? 'all' : (string) $activeBookId;
 $trialBalance = [];
 $totalDebit = 0.0;
 $totalCredit = 0.0;
@@ -40,6 +43,7 @@ foreach ($rows as $row) {
 <section class="surface-card mb-4">
     <form method="get" action="<?= htmlspecialchars(app_base()) ?>" class="accounts-filter-bar">
         <input type="hidden" name="page" value="accounts">
+        <input type="hidden" name="book_id" value="<?= htmlspecialchars($currentBookFilter) ?>">
         <input type="hidden" name="account" value="<?= htmlspecialchars($selectedAccount) ?>" data-account-input>
         <div>
             <label class="form-label">Daftar Account</label>
@@ -164,11 +168,13 @@ foreach ($rows as $row) {
                                             data-filter-date-from="<?= htmlspecialchars((string) ($filters['date_from'] ?? date('Y-m-01'))) ?>"
                                             data-filter-date-to="<?= htmlspecialchars((string) ($filters['date_to'] ?? date('Y-m-d'))) ?>"
                                             data-filter-keyword="<?= htmlspecialchars((string) ($filters['keyword'] ?? '')) ?>"
+                                            data-filter-book-id="<?= htmlspecialchars($currentBookFilter) ?>"
                                             title="Edit transaksi"
                                         ><i class="bi bi-pencil"></i></button>
                                         <form method="post" action="<?= htmlspecialchars(app_base('?page=accounts')) ?>" class="d-inline">
                                             <input type="hidden" name="action" value="delete-transaction">
                                             <input type="hidden" name="transaction_id" value="<?= htmlspecialchars((string) ($item['id'] ?? '')) ?>">
+                                            <input type="hidden" name="book_id" value="<?= htmlspecialchars($currentBookFilter) ?>">
                                             <input type="hidden" name="account" value="<?= htmlspecialchars($selectedAccount) ?>">
                                             <input type="hidden" name="date_from" value="<?= htmlspecialchars((string) ($filters['date_from'] ?? date('Y-m-01'))) ?>">
                                             <input type="hidden" name="date_to" value="<?= htmlspecialchars((string) ($filters['date_to'] ?? date('Y-m-d'))) ?>">
@@ -195,6 +201,7 @@ foreach ($rows as $row) {
     data-filter-date-from="<?= htmlspecialchars((string) ($filters['date_from'] ?? date('Y-m-01'))) ?>"
     data-filter-date-to="<?= htmlspecialchars((string) ($filters['date_to'] ?? date('Y-m-d'))) ?>"
     data-filter-keyword="<?= htmlspecialchars((string) ($filters['keyword'] ?? '')) ?>"
+    data-filter-book-id="<?= htmlspecialchars($currentBookFilter) ?>"
     data-default-account="<?= htmlspecialchars($defaultAccountForCreate) ?>"
 >
     <i class="bi bi-plus-lg"></i>
@@ -240,6 +247,7 @@ foreach ($rows as $row) {
             <div class="modal-body row g-3 pt-0">
                 <input type="hidden" name="action" id="tx-sheet-action" value="create-transaction">
                 <input type="hidden" id="tx-sheet-id" name="transaction_id" value="">
+                <input type="hidden" id="tx-sheet-filter-book-id" name="book_id" value="<?= htmlspecialchars($currentBookFilter) ?>">
                 <input type="hidden" id="tx-sheet-filter-account" name="account" value="<?= htmlspecialchars($selectedAccount) ?>">
                 <input type="hidden" id="tx-sheet-filter-date-from" name="date_from" value="<?= htmlspecialchars((string) ($filters['date_from'] ?? date('Y-m-01'))) ?>">
                 <input type="hidden" id="tx-sheet-filter-date-to" name="date_to" value="<?= htmlspecialchars((string) ($filters['date_to'] ?? date('Y-m-d'))) ?>">

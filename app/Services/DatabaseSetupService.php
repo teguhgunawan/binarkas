@@ -135,6 +135,33 @@ class DatabaseSetupService
                     "UPDATE transactions SET paired_category = '' WHERE paired_category IS NULL"
                 ],
             ],
+            [
+                'id' => '20260323_0008_books_scope',
+                'statements' => [
+                    "CREATE TABLE IF NOT EXISTS books (id BIGSERIAL PRIMARY KEY, name VARCHAR(140) NOT NULL, code VARCHAR(64) NOT NULL UNIQUE, owner_type VARCHAR(20) NOT NULL DEFAULT 'personal', is_active BOOLEAN NOT NULL DEFAULT TRUE, created_by BIGINT NULL, created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP)",
+                    "CREATE TABLE IF NOT EXISTS user_books (user_id BIGINT NOT NULL, book_id BIGINT NOT NULL, role VARCHAR(20) NOT NULL DEFAULT 'owner', is_default BOOLEAN NOT NULL DEFAULT FALSE, created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (user_id, book_id))",
+                    "DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE table_schema = current_schema() AND table_name = 'user_books' AND constraint_name = 'fk_user_books_user') THEN ALTER TABLE user_books ADD CONSTRAINT fk_user_books_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE; END IF; END $$",
+                    "DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE table_schema = current_schema() AND table_name = 'user_books' AND constraint_name = 'fk_user_books_book') THEN ALTER TABLE user_books ADD CONSTRAINT fk_user_books_book FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE; END IF; END $$",
+                    "INSERT INTO books (name, code, owner_type, is_active) SELECT 'Global Ledger', 'GLOBAL', 'mixed', TRUE WHERE NOT EXISTS (SELECT 1 FROM books)",
+                    "INSERT INTO user_books (user_id, book_id, role, is_default) SELECT u.id, b.id, 'owner', TRUE FROM users u CROSS JOIN LATERAL (SELECT id FROM books ORDER BY id ASC LIMIT 1) b WHERE NOT EXISTS (SELECT 1 FROM user_books ub WHERE ub.user_id = u.id AND ub.book_id = b.id)",
+                    "UPDATE user_books ub SET is_default = TRUE WHERE ub.user_id IN (SELECT u.id FROM users u WHERE NOT EXISTS (SELECT 1 FROM user_books x WHERE x.user_id = u.id AND x.is_default = TRUE)) AND ub.book_id = (SELECT id FROM books ORDER BY id ASC LIMIT 1)",
+                    "DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = 'accounts' AND column_name = 'book_id') THEN ALTER TABLE accounts ADD COLUMN book_id BIGINT; END IF; END $$",
+                    "DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = 'categories' AND column_name = 'book_id') THEN ALTER TABLE categories ADD COLUMN book_id BIGINT; END IF; END $$",
+                    "DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = 'transactions' AND column_name = 'book_id') THEN ALTER TABLE transactions ADD COLUMN book_id BIGINT; END IF; END $$",
+                    "DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = 'budgets' AND column_name = 'book_id') THEN ALTER TABLE budgets ADD COLUMN book_id BIGINT; END IF; END $$",
+                    "DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = 'debts' AND column_name = 'book_id') THEN ALTER TABLE debts ADD COLUMN book_id BIGINT; END IF; END $$",
+                    "UPDATE accounts SET book_id = (SELECT id FROM books ORDER BY id ASC LIMIT 1) WHERE book_id IS NULL",
+                    "UPDATE categories SET book_id = (SELECT id FROM books ORDER BY id ASC LIMIT 1) WHERE book_id IS NULL",
+                    "UPDATE transactions SET book_id = (SELECT id FROM books ORDER BY id ASC LIMIT 1) WHERE book_id IS NULL",
+                    "UPDATE budgets SET book_id = (SELECT id FROM books ORDER BY id ASC LIMIT 1) WHERE book_id IS NULL",
+                    "UPDATE debts SET book_id = (SELECT id FROM books ORDER BY id ASC LIMIT 1) WHERE book_id IS NULL",
+                    "DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE table_schema = current_schema() AND table_name = 'accounts' AND constraint_name = 'fk_accounts_book') THEN ALTER TABLE accounts ADD CONSTRAINT fk_accounts_book FOREIGN KEY (book_id) REFERENCES books(id); END IF; END $$",
+                    "DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE table_schema = current_schema() AND table_name = 'categories' AND constraint_name = 'fk_categories_book') THEN ALTER TABLE categories ADD CONSTRAINT fk_categories_book FOREIGN KEY (book_id) REFERENCES books(id); END IF; END $$",
+                    "DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE table_schema = current_schema() AND table_name = 'transactions' AND constraint_name = 'fk_transactions_book') THEN ALTER TABLE transactions ADD CONSTRAINT fk_transactions_book FOREIGN KEY (book_id) REFERENCES books(id); END IF; END $$",
+                    "DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE table_schema = current_schema() AND table_name = 'budgets' AND constraint_name = 'fk_budgets_book') THEN ALTER TABLE budgets ADD CONSTRAINT fk_budgets_book FOREIGN KEY (book_id) REFERENCES books(id); END IF; END $$",
+                    "DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE table_schema = current_schema() AND table_name = 'debts' AND constraint_name = 'fk_debts_book') THEN ALTER TABLE debts ADD CONSTRAINT fk_debts_book FOREIGN KEY (book_id) REFERENCES books(id); END IF; END $$"
+                ],
+            ],
         ];
     }
 

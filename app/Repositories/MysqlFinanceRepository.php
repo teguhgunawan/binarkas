@@ -3,9 +3,46 @@
 class MysqlFinanceRepository
 {
     private array $columnCache = [];
+    private array $tableCache = [];
 
     public function __construct(private readonly PDO $pdo)
     {
+    }
+
+    public function booksForUser(int $userId): array
+    {
+        if (!$this->hasTable('books')) {
+            return [];
+        }
+
+        if ($userId > 0 && $this->hasTable('user_books')) {
+            $statement = $this->pdo->prepare(
+                "SELECT b.id, b.name, b.code, b.owner_type, b.is_active, COALESCE(ub.is_default, FALSE) AS is_default
+                 FROM user_books ub
+                 INNER JOIN books b ON b.id = ub.book_id
+                 WHERE ub.user_id = :user_id AND b.is_active = TRUE
+                 ORDER BY ub.is_default DESC, b.name ASC"
+            );
+            $statement->execute(['user_id' => $userId]);
+            $rows = $statement->fetchAll() ?: [];
+            if ($rows !== []) {
+                return $rows;
+            }
+        }
+
+        $statement = $this->pdo->query(
+            "SELECT id, name, code, owner_type, is_active, FALSE AS is_default
+             FROM books
+             WHERE is_active = TRUE
+             ORDER BY id ASC"
+        );
+        $rows = $statement ? ($statement->fetchAll() ?: []) : [];
+        if ($rows === []) {
+            return [];
+        }
+
+        $rows[0]['is_default'] = true;
+        return $rows;
     }
 
     public function dashboardSummary(): array
@@ -34,9 +71,10 @@ class MysqlFinanceRepository
         $referenceExpr = $this->hasColumn('accounts', 'reference_number') ? "COALESCE(reference_number, '')" : "''";
         $iconExpr = $this->hasColumn('accounts', 'icon') ? "COALESCE(icon, '')" : "''";
         $descriptionExpr = $this->hasColumn('accounts', 'description') ? "COALESCE(description, '')" : "''";
+        $bookExpr = $this->hasColumn('accounts', 'book_id') ? 'COALESCE(book_id, 0)' : '0';
         $isActiveExpr = $this->hasColumn('accounts', 'is_active') ? 'is_active' : 'TRUE';
         $orderBy = $this->hasColumn('accounts', 'is_active') ? 'is_active DESC, type ASC, name ASC' : 'type ASC, name ASC';
-        $sql = "SELECT id, name, {$accountNameExpr} AS account_name, type, {$referenceExpr} AS reference_number, {$iconExpr} AS icon, {$descriptionExpr} AS description, {$isActiveExpr} AS is_active, balance FROM accounts ORDER BY {$orderBy}";
+        $sql = "SELECT id, {$bookExpr} AS book_id, name, {$accountNameExpr} AS account_name, type, {$referenceExpr} AS reference_number, {$iconExpr} AS icon, {$descriptionExpr} AS description, {$isActiveExpr} AS is_active, balance FROM accounts ORDER BY {$orderBy}";
         return $this->pdo->query($sql)->fetchAll() ?: [];
     }
 
@@ -75,6 +113,11 @@ class MysqlFinanceRepository
             $placeholders[] = ':is_active';
             $params['is_active'] = !empty($payload['is_active']) ? 'true' : 'false';
         }
+        if ($this->hasColumn('accounts', 'book_id')) {
+            $columns[] = 'book_id';
+            $placeholders[] = ':book_id';
+            $params['book_id'] = max(0, (int) ($payload['book_id'] ?? 0));
+        }
 
         $sql = 'INSERT INTO accounts (' . implode(', ', $columns) . ') VALUES (' . implode(', ', $placeholders) . ')';
         $statement = $this->pdo->prepare($sql);
@@ -112,6 +155,10 @@ class MysqlFinanceRepository
             $sets[] = 'is_active = :is_active';
             $params['is_active'] = !empty($payload['is_active']) ? 'true' : 'false';
         }
+        if ($this->hasColumn('accounts', 'book_id') && array_key_exists('book_id', $payload)) {
+            $sets[] = 'book_id = :book_id';
+            $params['book_id'] = max(0, (int) $payload['book_id']);
+        }
 
         $sql = 'UPDATE accounts SET ' . implode(', ', $sets) . ' WHERE id = :id';
         $statement = $this->pdo->prepare($sql);
@@ -132,12 +179,13 @@ class MysqlFinanceRepository
             ? "COALESCE(group_name, CASE WHEN type = 'income' THEN 'income' WHEN type = 'transfer' THEN 'transfer' ELSE 'expense' END)"
             : "CASE WHEN type = 'income' THEN 'income' WHEN type = 'transfer' THEN 'transfer' ELSE 'expense' END";
         $iconExpr = $this->hasColumn('categories', 'icon') ? "COALESCE(icon, '')" : "''";
+        $bookExpr = $this->hasColumn('categories', 'book_id') ? 'COALESCE(book_id, 0)' : '0';
         $activeExpr = $this->hasColumn('categories', 'is_active') ? 'is_active' : 'TRUE';
         $sortExpr = $this->hasColumn('categories', 'sort_order') ? 'sort_order' : '0';
         $orderBy = $this->hasColumn('categories', 'group_name') ? 'group_name ASC, ' : '';
         $orderBy .= $this->hasColumn('categories', 'sort_order') ? 'sort_order ASC, ' : '';
         $orderBy .= 'name ASC';
-        $sql = "SELECT id, name, type, {$groupNameExpr} AS group_name, {$iconExpr} AS icon, {$activeExpr} AS is_active, {$sortExpr} AS sort_order FROM categories ORDER BY {$orderBy}";
+        $sql = "SELECT id, {$bookExpr} AS book_id, name, type, {$groupNameExpr} AS group_name, {$iconExpr} AS icon, {$activeExpr} AS is_active, {$sortExpr} AS sort_order FROM categories ORDER BY {$orderBy}";
         return $this->pdo->query($sql)->fetchAll() ?: [];
     }
 
@@ -167,6 +215,11 @@ class MysqlFinanceRepository
             $placeholders[] = ':sort_order';
             $params['sort_order'] = $payload['sort_order'];
         }
+        if ($this->hasColumn('categories', 'book_id')) {
+            $columns[] = 'book_id';
+            $placeholders[] = ':book_id';
+            $params['book_id'] = max(0, (int) ($payload['book_id'] ?? 0));
+        }
 
         $statement = $this->pdo->prepare('INSERT INTO categories (' . implode(', ', $columns) . ') VALUES (' . implode(', ', $placeholders) . ')');
         $statement->execute($params);
@@ -194,6 +247,10 @@ class MysqlFinanceRepository
             $sets[] = 'sort_order = :sort_order';
             $params['sort_order'] = $payload['sort_order'];
         }
+        if ($this->hasColumn('categories', 'book_id') && array_key_exists('book_id', $payload)) {
+            $sets[] = 'book_id = :book_id';
+            $params['book_id'] = max(0, (int) $payload['book_id']);
+        }
 
         $statement = $this->pdo->prepare('UPDATE categories SET ' . implode(', ', $sets) . ' WHERE id = :id');
         $statement->execute($params);
@@ -212,7 +269,8 @@ class MysqlFinanceRepository
         $accountExpr = $this->hasColumn('transactions', 'account_name') ? "COALESCE(account_name, '')" : "''";
         $pairedAccountExpr = $this->hasColumn('transactions', 'paired_account_name') ? "COALESCE(paired_account_name, '')" : "''";
         $pairedCategoryExpr = $this->hasColumn('transactions', 'paired_category') ? "COALESCE(paired_category, '')" : "''";
-        $sql = "SELECT id, transaction_date AS date, title, {$accountExpr} AS account_name, category, {$pairedAccountExpr} AS paired_account_name, {$pairedCategoryExpr} AS paired_category, type, amount FROM transactions ORDER BY transaction_date DESC, id DESC";
+        $bookExpr = $this->hasColumn('transactions', 'book_id') ? 'COALESCE(book_id, 0)' : '0';
+        $sql = "SELECT id, {$bookExpr} AS book_id, transaction_date AS date, title, {$accountExpr} AS account_name, category, {$pairedAccountExpr} AS paired_account_name, {$pairedCategoryExpr} AS paired_category, type, amount FROM transactions ORDER BY transaction_date DESC, id DESC";
         return $this->pdo->query($sql)->fetchAll() ?: [];
     }
 
@@ -243,6 +301,11 @@ class MysqlFinanceRepository
             $placeholders[] = ':paired_category';
             $params['paired_category'] = $payload['paired_category'] ?? '';
         }
+        if ($this->hasColumn('transactions', 'book_id')) {
+            $columns[] = 'book_id';
+            $placeholders[] = ':book_id';
+            $params['book_id'] = max(0, (int) ($payload['book_id'] ?? 0));
+        }
 
         $sql = 'INSERT INTO transactions (' . implode(', ', $columns) . ') VALUES (' . implode(', ', $placeholders) . ')';
         $statement = $this->pdo->prepare($sql);
@@ -261,6 +324,9 @@ class MysqlFinanceRepository
         }
         if ($this->hasColumn('transactions', 'paired_category')) {
             $sets[] = 'paired_category = :paired_category';
+        }
+        if ($this->hasColumn('transactions', 'book_id') && array_key_exists('book_id', $payload)) {
+            $sets[] = 'book_id = :book_id';
         }
         $sql = 'UPDATE transactions SET ' . implode(', ', $sets) . ' WHERE id = :id';
         $statement = $this->pdo->prepare($sql);
@@ -281,6 +347,9 @@ class MysqlFinanceRepository
         if ($this->hasColumn('transactions', 'paired_category')) {
             $params['paired_category'] = $payload['paired_category'] ?? '';
         }
+        if ($this->hasColumn('transactions', 'book_id') && array_key_exists('book_id', $payload)) {
+            $params['book_id'] = max(0, (int) $payload['book_id']);
+        }
         $statement->execute($params);
         return $statement->rowCount() > 0;
     }
@@ -294,20 +363,35 @@ class MysqlFinanceRepository
 
     public function budgets(): array
     {
-        return $this->pdo->query('SELECT id, name, allocated, used FROM budgets ORDER BY name ASC')->fetchAll() ?: [];
+        $bookExpr = $this->hasColumn('budgets', 'book_id') ? 'COALESCE(book_id, 0)' : '0';
+        return $this->pdo->query("SELECT id, {$bookExpr} AS book_id, name, allocated, used FROM budgets ORDER BY name ASC")->fetchAll() ?: [];
     }
 
     public function createBudget(array $payload): array
     {
-        $statement = $this->pdo->prepare('INSERT INTO budgets (name, allocated, used) VALUES (:name, :allocated, :used) RETURNING id, name, allocated, used');
-        $statement->execute(['name' => $payload['name'], 'allocated' => $payload['allocated'], 'used' => $payload['used']]);
+        $columns = ['name', 'allocated', 'used'];
+        $placeholders = [':name', ':allocated', ':used'];
+        $params = ['name' => $payload['name'], 'allocated' => $payload['allocated'], 'used' => $payload['used']];
+        if ($this->hasColumn('budgets', 'book_id')) {
+            $columns[] = 'book_id';
+            $placeholders[] = ':book_id';
+            $params['book_id'] = max(0, (int) ($payload['book_id'] ?? 0));
+        }
+        $statement = $this->pdo->prepare('INSERT INTO budgets (' . implode(', ', $columns) . ') VALUES (' . implode(', ', $placeholders) . ') RETURNING id, name, allocated, used');
+        $statement->execute($params);
         return $statement->fetch() ?: [];
     }
 
     public function updateBudget(int $budgetId, array $payload): bool
     {
-        $statement = $this->pdo->prepare('UPDATE budgets SET name = :name, allocated = :allocated, used = :used WHERE id = :id');
-        $statement->execute(['id' => $budgetId, 'name' => $payload['name'], 'allocated' => $payload['allocated'], 'used' => $payload['used']]);
+        $sets = ['name = :name', 'allocated = :allocated', 'used = :used'];
+        $params = ['id' => $budgetId, 'name' => $payload['name'], 'allocated' => $payload['allocated'], 'used' => $payload['used']];
+        if ($this->hasColumn('budgets', 'book_id') && array_key_exists('book_id', $payload)) {
+            $sets[] = 'book_id = :book_id';
+            $params['book_id'] = max(0, (int) $payload['book_id']);
+        }
+        $statement = $this->pdo->prepare('UPDATE budgets SET ' . implode(', ', $sets) . ' WHERE id = :id');
+        $statement->execute($params);
         return $statement->rowCount() > 0;
     }
 
@@ -320,20 +404,35 @@ class MysqlFinanceRepository
 
     public function debts(): array
     {
-        return $this->pdo->query('SELECT id, name, due_label AS due, amount, status FROM debts ORDER BY id DESC LIMIT 10')->fetchAll() ?: [];
+        $bookExpr = $this->hasColumn('debts', 'book_id') ? 'COALESCE(book_id, 0)' : '0';
+        return $this->pdo->query("SELECT id, {$bookExpr} AS book_id, name, due_label AS due, amount, status FROM debts ORDER BY id DESC LIMIT 10")->fetchAll() ?: [];
     }
 
     public function createDebt(array $payload): array
     {
-        $statement = $this->pdo->prepare('INSERT INTO debts (name, due_label, amount, status) VALUES (:name, :due, :amount, :status) RETURNING id, name, due_label AS due, amount, status');
-        $statement->execute(['name' => $payload['name'], 'due' => $payload['due'], 'amount' => $payload['amount'], 'status' => $payload['status']]);
+        $columns = ['name', 'due_label', 'amount', 'status'];
+        $placeholders = [':name', ':due', ':amount', ':status'];
+        $params = ['name' => $payload['name'], 'due' => $payload['due'], 'amount' => $payload['amount'], 'status' => $payload['status']];
+        if ($this->hasColumn('debts', 'book_id')) {
+            $columns[] = 'book_id';
+            $placeholders[] = ':book_id';
+            $params['book_id'] = max(0, (int) ($payload['book_id'] ?? 0));
+        }
+        $statement = $this->pdo->prepare('INSERT INTO debts (' . implode(', ', $columns) . ') VALUES (' . implode(', ', $placeholders) . ') RETURNING id, name, due_label AS due, amount, status');
+        $statement->execute($params);
         return $statement->fetch() ?: [];
     }
 
     public function updateDebt(int $debtId, array $payload): bool
     {
-        $statement = $this->pdo->prepare('UPDATE debts SET name = :name, due_label = :due, amount = :amount, status = :status WHERE id = :id');
-        $statement->execute(['id' => $debtId, 'name' => $payload['name'], 'due' => $payload['due'], 'amount' => $payload['amount'], 'status' => $payload['status']]);
+        $sets = ['name = :name', 'due_label = :due', 'amount = :amount', 'status = :status'];
+        $params = ['id' => $debtId, 'name' => $payload['name'], 'due' => $payload['due'], 'amount' => $payload['amount'], 'status' => $payload['status']];
+        if ($this->hasColumn('debts', 'book_id') && array_key_exists('book_id', $payload)) {
+            $sets[] = 'book_id = :book_id';
+            $params['book_id'] = max(0, (int) $payload['book_id']);
+        }
+        $statement = $this->pdo->prepare('UPDATE debts SET ' . implode(', ', $sets) . ' WHERE id = :id');
+        $statement->execute($params);
         return $statement->rowCount() > 0;
     }
 
@@ -369,6 +468,26 @@ class MysqlFinanceRepository
         $statement->execute(['table' => $table, 'column' => $column]);
         $exists = (bool) $statement->fetchColumn();
         $this->columnCache[$key] = $exists;
+        return $exists;
+    }
+
+    private function hasTable(string $table): bool
+    {
+        if (array_key_exists($table, $this->tableCache)) {
+            return $this->tableCache[$table];
+        }
+
+        $statement = $this->pdo->prepare(
+            "SELECT EXISTS (
+                SELECT 1
+                FROM information_schema.tables
+                WHERE table_schema = current_schema()
+                  AND table_name = :table
+            )"
+        );
+        $statement->execute(['table' => $table]);
+        $exists = (bool) $statement->fetchColumn();
+        $this->tableCache[$table] = $exists;
         return $exists;
     }
 }

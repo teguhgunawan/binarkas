@@ -63,6 +63,10 @@ body {
     background: rgba(255, 255, 255, 0.08);
     border: 1px solid rgba(255, 255, 255, 0.08);
 }
+.sidebar-footer .form-select {
+    background-color: rgba(255, 255, 255, 0.92);
+    border-color: rgba(255, 255, 255, 0.4);
+}
 
 .content-panel {
     padding: 2rem;

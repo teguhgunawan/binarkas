@@ -102,6 +102,7 @@ document.addEventListener('DOMContentLoaded', function () {
         bindValue('#tx-sheet-amount', '');
         bindValue('#tx-sheet-paired-account', '');
         bindValue('#tx-sheet-paired-category', '');
+        bindValue('#tx-sheet-filter-book-id', sourceButton ? sourceButton.dataset.filterBookId : '');
         bindValue('#tx-sheet-filter-account', sourceButton ? sourceButton.dataset.filterAccount : '');
         bindValue('#tx-sheet-filter-date-from', sourceButton ? sourceButton.dataset.filterDateFrom : '');
         bindValue('#tx-sheet-filter-date-to', sourceButton ? sourceButton.dataset.filterDateTo : '');
@@ -139,6 +140,7 @@ document.addEventListener('DOMContentLoaded', function () {
             bindValue('#tx-sheet-amount', button.dataset.amount);
             bindValue('#tx-sheet-paired-account', button.dataset.pairedAccountName);
             bindValue('#tx-sheet-paired-category', button.dataset.pairedCategory);
+            bindValue('#tx-sheet-filter-book-id', button.dataset.filterBookId);
             bindValue('#tx-sheet-filter-account', button.dataset.filterAccount);
             bindValue('#tx-sheet-filter-date-from', button.dataset.filterDateFrom);
             bindValue('#tx-sheet-filter-date-to', button.dataset.filterDateTo);

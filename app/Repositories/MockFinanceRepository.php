@@ -3,6 +3,9 @@
 class MockFinanceRepository
 {
     private array $data;
+    private array $mockBooks = [
+        ['id' => 1, 'name' => 'Global Ledger', 'code' => 'GLOBAL', 'owner_type' => 'mixed', 'is_active' => true, 'is_default' => true],
+    ];
 
     public function __construct()
     {
@@ -14,10 +17,16 @@ class MockFinanceRepository
         return $this->data['summary'];
     }
 
+    public function booksForUser(int $userId): array
+    {
+        return $this->mockBooks;
+    }
+
     public function accounts(): array
     {
         return array_map(static fn (array $account, int $index): array => [
             'id' => 'mock-' . ($index + 1),
+            'book_id' => $account['book_id'] ?? 1,
             'account_name' => $account['account_name'] ?? $account['name'],
             'reference_number' => $account['reference_number'] ?? '',
             'icon' => $account['icon'] ?? '',
@@ -33,12 +42,12 @@ class MockFinanceRepository
     public function categories(): array
     {
         return [
-            ['id' => 'mock-cat-1', 'name' => 'Pendapatan Gaji', 'type' => 'income', 'group_name' => 'income', 'icon' => '', 'is_active' => true, 'sort_order' => 10],
-            ['id' => 'mock-cat-2', 'name' => 'General Savings', 'type' => 'expense', 'group_name' => 'saving', 'icon' => '', 'is_active' => true, 'sort_order' => 10],
-            ['id' => 'mock-cat-3', 'name' => 'Saham', 'type' => 'expense', 'group_name' => 'investment', 'icon' => '', 'is_active' => true, 'sort_order' => 10],
-            ['id' => 'mock-cat-4', 'name' => 'Food', 'type' => 'expense', 'group_name' => 'expense', 'icon' => '', 'is_active' => true, 'sort_order' => 10],
-            ['id' => 'mock-cat-5', 'name' => 'Bayar Kartu Kredit', 'type' => 'expense', 'group_name' => 'debt_payoff', 'icon' => '', 'is_active' => true, 'sort_order' => 10],
-            ['id' => 'mock-cat-6', 'name' => 'Transfer', 'type' => 'transfer', 'group_name' => 'transfer', 'icon' => '', 'is_active' => true, 'sort_order' => 10],
+            ['id' => 'mock-cat-1', 'book_id' => 1, 'name' => 'Pendapatan Gaji', 'type' => 'income', 'group_name' => 'income', 'icon' => '', 'is_active' => true, 'sort_order' => 10],
+            ['id' => 'mock-cat-2', 'book_id' => 1, 'name' => 'General Savings', 'type' => 'expense', 'group_name' => 'saving', 'icon' => '', 'is_active' => true, 'sort_order' => 10],
+            ['id' => 'mock-cat-3', 'book_id' => 1, 'name' => 'Saham', 'type' => 'expense', 'group_name' => 'investment', 'icon' => '', 'is_active' => true, 'sort_order' => 10],
+            ['id' => 'mock-cat-4', 'book_id' => 1, 'name' => 'Food', 'type' => 'expense', 'group_name' => 'expense', 'icon' => '', 'is_active' => true, 'sort_order' => 10],
+            ['id' => 'mock-cat-5', 'book_id' => 1, 'name' => 'Bayar Kartu Kredit', 'type' => 'expense', 'group_name' => 'debt_payoff', 'icon' => '', 'is_active' => true, 'sort_order' => 10],
+            ['id' => 'mock-cat-6', 'book_id' => 1, 'name' => 'Transfer', 'type' => 'transfer', 'group_name' => 'transfer', 'icon' => '', 'is_active' => true, 'sort_order' => 10],
         ];
     }
 
@@ -48,7 +57,7 @@ class MockFinanceRepository
 
     public function transactions(): array
     {
-        return array_map(static fn (array $item, int $index): array => ['id' => 'mock-txn-' . ($index + 1), 'amount' => (float) $item['amount']] + $item, $this->data['transactions'], array_keys($this->data['transactions']));
+        return array_map(static fn (array $item, int $index): array => ['id' => 'mock-txn-' . ($index + 1), 'book_id' => $item['book_id'] ?? 1, 'amount' => (float) $item['amount']] + $item, $this->data['transactions'], array_keys($this->data['transactions']));
     }
 
     public function createTransaction(array $payload): array { throw new RuntimeException('Database schema is not ready for transaction writes.'); }
@@ -57,7 +66,7 @@ class MockFinanceRepository
 
     public function budgets(): array
     {
-        return array_map(static fn (array $item, int $index): array => ['id' => 'mock-budget-' . ($index + 1)] + $item, $this->data['budgets'], array_keys($this->data['budgets']));
+        return array_map(static fn (array $item, int $index): array => ['id' => 'mock-budget-' . ($index + 1), 'book_id' => $item['book_id'] ?? 1] + $item, $this->data['budgets'], array_keys($this->data['budgets']));
     }
 
     public function createBudget(array $payload): array { throw new RuntimeException('Database schema is not ready for budget writes.'); }
@@ -66,7 +75,7 @@ class MockFinanceRepository
 
     public function debts(): array
     {
-        return array_map(static fn (array $item, int $index): array => ['id' => 'mock-debt-' . ($index + 1)] + $item, $this->data['debts'], array_keys($this->data['debts']));
+        return array_map(static fn (array $item, int $index): array => ['id' => 'mock-debt-' . ($index + 1), 'book_id' => $item['book_id'] ?? 1] + $item, $this->data['debts'], array_keys($this->data['debts']));
     }
 
     public function createDebt(array $payload): array { throw new RuntimeException('Database schema is not ready for debt writes.'); }

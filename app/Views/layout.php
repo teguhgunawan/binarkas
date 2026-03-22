@@ -11,6 +11,10 @@ $transactions = $transactions ?? [];
 $budgets = $budgets ?? [];
 $debts = $debts ?? [];
 $users = $users ?? [];
+$books = $books ?? [];
+$activeBookId = $activeBookId ?? null;
+$isGlobalBookScope = $isGlobalBookScope ?? true;
+$activeBookLabel = $activeBookLabel ?? 'Global (Semua Pembukuan)';
 $reportData = $reportData ?? [];
 $flash = $flash ?? null;
 $formErrors = $formErrors ?? [];
@@ -44,7 +48,7 @@ $selectedAccountLabel = $selectedAccountLabel ?? 'Semua Akun';
 </head>
 <body>
 <div class="app-shell">
-    <?php render('partials/sidebar', ['page' => $page, 'config' => $config, 'authUser' => $authUser, 'database' => $database]); ?>
+    <?php render('partials/sidebar', ['page' => $page, 'config' => $config, 'authUser' => $authUser, 'database' => $database, 'books' => $books, 'activeBookId' => $activeBookId, 'isGlobalBookScope' => $isGlobalBookScope, 'activeBookLabel' => $activeBookLabel]); ?>
     <button type="button" id="sidebarBackdrop" class="sidebar-backdrop" aria-label="Close Sidebar"></button>
     <main class="content-panel">
         <?php render('partials/topbar', ['page' => $page, 'database' => $database, 'authUser' => $authUser]); ?>
@@ -58,6 +62,10 @@ $selectedAccountLabel = $selectedAccountLabel ?? 'Semua Akun';
             'budgets',
             'debts',
             'users',
+            'books',
+            'activeBookId',
+            'isGlobalBookScope',
+            'activeBookLabel',
             'reportData',
             'flash',
             'formErrors',
