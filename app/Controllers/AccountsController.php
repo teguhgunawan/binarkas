@@ -8,19 +8,38 @@ class AccountsController
 
     public function handle(): void
     {
+        $viewData = [];
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $action = (string) ($_POST['action'] ?? '');
+            try {
+                $result = match ($action) {
+                    'update-transaction' => $this->financeService->updateTransaction($_POST),
+                    'delete-transaction' => $this->financeService->deleteTransaction($_POST),
+                    default => ['ok' => false, 'message' => 'Unsupported account action.'],
+                };
+                $viewData['flash'] = $result;
+            } catch (InvalidArgumentException $exception) {
+                $viewData['flash'] = ['ok' => false, 'message' => 'Form transaksi tidak valid.'];
+            } catch (Throwable $exception) {
+                $viewData['flash'] = ['ok' => false, 'message' => $exception->getMessage()];
+            }
+        }
+
+        $source = $_SERVER['REQUEST_METHOD'] === 'POST' ? $_POST : $_GET;
         $input = [
-            'account' => (string) ($_GET['account'] ?? '__all'),
-            'date_from' => (string) ($_GET['date_from'] ?? date('Y-m-01')),
-            'date_to' => (string) ($_GET['date_to'] ?? date('Y-m-d')),
-            'keyword' => (string) ($_GET['keyword'] ?? ''),
+            'account' => (string) ($source['account'] ?? '__all'),
+            'date_from' => (string) ($source['date_from'] ?? date('Y-m-01')),
+            'date_to' => (string) ($source['date_to'] ?? date('Y-m-d')),
+            'keyword' => (string) ($source['keyword'] ?? ''),
         ];
 
         $ledger = $this->financeService->buildAccountLedger($input);
-        render('layout', $this->financeService->pageData('accounts', [
+        render('layout', $this->financeService->pageData('accounts', array_merge($viewData, [
             'accountLedgerFilters' => $ledger['filters'],
             'accountLedgerRows' => $ledger['rows'],
             'accountLedgerGroupedRows' => $ledger['groupedRows'],
             'selectedAccountLabel' => $ledger['selectedAccountLabel'],
-        ]));
+        ])));
     }
 }

@@ -1,11 +1,15 @@
-<aside class="sidebar-panel d-flex flex-column justify-content-between p-4">
+<aside id="appSidebar" class="sidebar-panel d-flex flex-column justify-content-between p-4">
     <div>
-        <div class="brand-mark mb-4">
-            <span class="brand-kicker">Personal Wealth OS</span>
-            <h1 class="h3 mb-1"><?= htmlspecialchars($config['name'] ?? 'BINARKAS') ?></h1>
-            <p class="text-white-50 mb-0">Bootstrap rebuild</p>
+        <div class="d-flex align-items-start justify-content-between mb-4">
+            <div class="brand-mark">
+                <span class="brand-kicker">Personal Wealth OS</span>
+                <h1 class="h3 mb-1"><?= htmlspecialchars($config['name'] ?? 'BINARKAS') ?></h1>
+                <p class="text-white-50 mb-0">Bootstrap rebuild</p>
+            </div>
+            <button type="button" id="sidebarCloseBtn" class="btn btn-sm btn-outline-light d-lg-none rounded-circle" aria-label="Close Sidebar">
+                <i class="bi bi-x-lg"></i>
+            </button>
         </div>
-
         <?php
         $coreNav = [
             'dashboard' => 'Dashboard',

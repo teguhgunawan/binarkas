@@ -1,8 +1,9 @@
 <header class="topbar d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
-    <div>
-        <div class="eyebrow">Overview</div>
-        <h2 class="h3 mb-1"><?= htmlspecialchars(page_title($page)) ?></h2>
-        <p class="text-muted mb-0">BINARKAS modular PHP baseline with Bootstrap and PDO-ready architecture.</p>
+    <div class="d-flex align-items-center gap-2">
+        <button type="button" id="sidebarToggleBtn" class="btn btn-light rounded-pill px-3" aria-label="Toggle Sidebar">
+            <i class="bi bi-list"></i>
+        </button>
+        <h2 class="h4 mb-0"><?= htmlspecialchars(page_title($page)) ?></h2>
     </div>
     <div class="d-flex flex-wrap align-items-center gap-2">
         <?php if (!empty($database['connected']) && !empty($database['schemaReady'])): ?>
@@ -17,8 +18,10 @@
             <span class="badge rounded-pill text-bg-light px-3 py-2"><?= htmlspecialchars($authUser['email']) ?></span>
             <a href="<?= htmlspecialchars(app_base('?page=logout')) ?>" class="btn btn-outline-secondary rounded-pill px-3">Logout</a>
         <?php endif; ?>
-        <button class="btn btn-light rounded-pill px-3">Search</button>
-        <button class="btn btn-primary rounded-pill px-4">Quick Add</button>
+        <button type="button" class="btn btn-light rounded-pill px-3">Search</button>
+        <a href="<?= htmlspecialchars(app_base('?page=transactions')) ?>" class="btn btn-primary rounded-pill px-4">
+            <i class="bi bi-plus-circle me-1"></i>Tambah Transaksi
+        </a>
     </div>
 </header>
 <?php if (empty($database['connected']) && !empty($database['error'])): ?>

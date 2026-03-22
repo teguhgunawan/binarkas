@@ -39,11 +39,13 @@ $selectedAccountLabel = $selectedAccountLabel ?? 'Semua Akun';
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?= htmlspecialchars(($config['name'] ?? 'BINARKAS') . ' - ' . page_title($page)) ?></title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <link href="<?= htmlspecialchars(app_base('assets/css/app.css')) ?>" rel="stylesheet">
 </head>
 <body>
 <div class="app-shell">
     <?php render('partials/sidebar', ['page' => $page, 'config' => $config, 'authUser' => $authUser]); ?>
+    <button type="button" id="sidebarBackdrop" class="sidebar-backdrop" aria-label="Close Sidebar"></button>
     <main class="content-panel">
         <?php render('partials/topbar', ['page' => $page, 'database' => $database, 'authUser' => $authUser]); ?>
         <?php render('pages/' . $page, compact(
