@@ -51,7 +51,13 @@ class FinanceService
             'transactionFormErrors' => [],
             'budgetFormData' => ['name' => '', 'allocated' => '0', 'used' => '0'],
             'budgetFormErrors' => [],
-            'debtFormData' => ['name' => '', 'due' => '', 'amount' => '0', 'status' => 'safe'],
+            'debtFormData' => [
+                'name' => '', 'debt_type' => 'credit_card', 'due' => '', 'amount' => '0', 'status' => 'safe',
+                'cc_last_four' => '', 'cc_expiry' => '', 'cc_billing_day' => '', 'cc_due_day' => '',
+                'loan_principal' => '0', 'loan_installment' => '0', 'loan_tenure_months' => '',
+                'loan_paid_months' => '0', 'loan_due_day' => '', 'interest_rate' => '',
+                'od_usage_start_date' => '', 'od_due_date' => '',
+            ],
             'debtFormErrors' => [],
             'categoryFormData' => ['name' => '', 'type' => 'expense', 'group_name' => 'expense', 'icon' => '', 'is_active' => '1', 'sort_order' => '10'],
             'categoryFormErrors' => [],
@@ -527,29 +533,129 @@ class FinanceService
 
     private function validateDebtPayload(array $input): array
     {
-        $name = trim((string) ($input['name'] ?? ''));
-        $due = trim((string) ($input['due'] ?? ''));
+        $name      = trim((string) ($input['name'] ?? ''));
+        $type      = trim((string) ($input['debt_type'] ?? 'general'));
         $amountRaw = str_replace([',', ' '], '', (string) ($input['amount'] ?? '0'));
-        $status = trim((string) ($input['status'] ?? 'safe'));
-        $errors = [];
+        $status    = trim((string) ($input['status'] ?? 'safe'));
+        $errors    = [];
 
         if (mb_strlen($name) < 2) {
-            $errors['name'] = 'Debt name must be at least 2 characters.';
+            $errors['name'] = 'Nama wajib diisi minimal 2 karakter.';
         }
-        if (mb_strlen($due) < 2) {
-            $errors['due'] = 'Due label must be at least 2 characters.';
+        if (!array_key_exists($type, debt_type_options())) {
+            $errors['debt_type'] = 'Tipe hutang tidak valid.';
         }
         if (!is_numeric($amountRaw) || (float) $amountRaw < 0) {
-            $errors['amount'] = 'Amount must be numeric and non-negative.';
+            $errors['amount'] = 'Nominal harus angka non-negatif.';
         }
         if (!in_array($status, debt_status_options(), true)) {
-            $errors['status'] = 'Invalid debt status.';
+            $errors['status'] = 'Status tidak valid.';
         }
+
+        $payload = [
+            'name' => $name, 'debt_type' => $type, 'amount' => (float) $amountRaw, 'status' => $status,
+            'due' => '',
+            'cc_last_four' => null, 'cc_expiry' => null, 'cc_billing_day' => null, 'cc_due_day' => null,
+            'loan_principal' => null, 'loan_installment' => null, 'loan_tenure_months' => null,
+            'loan_paid_months' => null, 'loan_due_day' => null,
+            'interest_rate' => null,
+            'od_usage_start_date' => null, 'od_due_date' => null,
+        ];
+
+        if ($type === 'credit_card') {
+            $lastFour   = trim((string) ($input['cc_last_four'] ?? ''));
+            $expiry     = trim((string) ($input['cc_expiry'] ?? ''));
+            $billingDay = trim((string) ($input['cc_billing_day'] ?? ''));
+            $dueDay     = trim((string) ($input['cc_due_day'] ?? ''));
+
+            if (!preg_match('/^\d{4}$/', $lastFour)) {
+                $errors['cc_last_four'] = '4 digit terakhir nomor kartu wajib diisi.';
+            }
+            if (!preg_match('/^(0[1-9]|1[0-2])\/\d{4}$/', $expiry)) {
+                $errors['cc_expiry'] = 'Format masa aktif: MM/YYYY (contoh: 08/2029).';
+            }
+            if (!ctype_digit($billingDay) || (int) $billingDay < 1 || (int) $billingDay > 31) {
+                $errors['cc_billing_day'] = 'Tanggal cetak tagihan harus 1–31.';
+            }
+            if (!ctype_digit($dueDay) || (int) $dueDay < 1 || (int) $dueDay > 31) {
+                $errors['cc_due_day'] = 'Tanggal jatuh tempo harus 1–31.';
+            }
+
+            $payload['due']            = "Jatuh tempo tgl {$dueDay} tiap bulan";
+            $payload['cc_last_four']   = $lastFour;
+            $payload['cc_expiry']      = $expiry;
+            $payload['cc_billing_day'] = ctype_digit($billingDay) ? (int) $billingDay : null;
+            $payload['cc_due_day']     = ctype_digit($dueDay) ? (int) $dueDay : null;
+
+        } elseif ($type === 'installment') {
+            $principalRaw   = str_replace([',', ' '], '', (string) ($input['loan_principal'] ?? '0'));
+            $installmentRaw = str_replace([',', ' '], '', (string) ($input['loan_installment'] ?? '0'));
+            $tenureRaw      = trim((string) ($input['loan_tenure_months'] ?? ''));
+            $paidRaw        = trim((string) ($input['loan_paid_months'] ?? '0'));
+            $dueDayRaw      = trim((string) ($input['loan_due_day'] ?? ''));
+            $rateRaw        = str_replace([',', ' '], '', (string) ($input['interest_rate'] ?? ''));
+
+            if (!is_numeric($principalRaw) || (float) $principalRaw <= 0) {
+                $errors['loan_principal'] = 'Pokok pinjaman harus lebih dari 0.';
+            }
+            if (!is_numeric($installmentRaw) || (float) $installmentRaw <= 0) {
+                $errors['loan_installment'] = 'Angsuran bulanan harus lebih dari 0.';
+            }
+            if (!ctype_digit($tenureRaw) || (int) $tenureRaw < 1) {
+                $errors['loan_tenure_months'] = 'Tenor harus bilangan bulat positif.';
+            }
+            if (!ctype_digit($paidRaw) || (int) $paidRaw < 0) {
+                $errors['loan_paid_months'] = 'Bulan dibayar tidak valid.';
+            }
+            if (!ctype_digit($dueDayRaw) || (int) $dueDayRaw < 1 || (int) $dueDayRaw > 31) {
+                $errors['loan_due_day'] = 'Tanggal jatuh tempo cicilan harus 1–31.';
+            }
+            if ($rateRaw !== '' && (!is_numeric($rateRaw) || (float) $rateRaw < 0)) {
+                $errors['interest_rate'] = 'Suku bunga harus angka non-negatif.';
+            }
+
+            $remaining = max(0, (int) $tenureRaw - (int) $paidRaw);
+            $payload['due']                = "Angsuran tgl {$dueDayRaw}, sisa {$remaining} bln";
+            $payload['loan_principal']     = is_numeric($principalRaw) ? (float) $principalRaw : null;
+            $payload['loan_installment']   = is_numeric($installmentRaw) ? (float) $installmentRaw : null;
+            $payload['loan_tenure_months'] = ctype_digit($tenureRaw) ? (int) $tenureRaw : null;
+            $payload['loan_paid_months']   = ctype_digit($paidRaw) ? (int) $paidRaw : null;
+            $payload['loan_due_day']       = ctype_digit($dueDayRaw) ? (int) $dueDayRaw : null;
+            $payload['interest_rate']      = ($rateRaw !== '' && is_numeric($rateRaw)) ? (float) $rateRaw : null;
+
+        } elseif ($type === 'overdraft') {
+            $startDate = trim((string) ($input['od_usage_start_date'] ?? ''));
+            $dueDate   = trim((string) ($input['od_due_date'] ?? ''));
+            $rateRaw   = str_replace([',', ' '], '', (string) ($input['interest_rate'] ?? ''));
+
+            if (!$this->isValidDate($startDate)) {
+                $errors['od_usage_start_date'] = 'Tanggal mulai pemakaian tidak valid.';
+            }
+            if (!$this->isValidDate($dueDate)) {
+                $errors['od_due_date'] = 'Tanggal jatuh tempo tidak valid.';
+            }
+            if (!is_numeric($rateRaw) || (float) $rateRaw < 0) {
+                $errors['interest_rate'] = 'Suku bunga tahunan harus angka non-negatif.';
+            }
+
+            $payload['due']                 = "Jatuh tempo: {$dueDate}";
+            $payload['od_usage_start_date'] = $startDate;
+            $payload['od_due_date']         = $dueDate;
+            $payload['interest_rate']       = is_numeric($rateRaw) ? (float) $rateRaw : null;
+
+        } else {
+            $due = trim((string) ($input['due'] ?? ''));
+            if (mb_strlen($due) < 2) {
+                $errors['due'] = 'Due label wajib diisi minimal 2 karakter.';
+            }
+            $payload['due'] = $due;
+        }
+
         if ($errors !== []) {
             throw new InvalidArgumentException(json_encode($errors, JSON_THROW_ON_ERROR));
         }
 
-        return ['name' => $name, 'due' => $due, 'amount' => (float) $amountRaw, 'status' => $status];
+        return $payload;
     }
 
     private function validateCategoryPayload(array $input): array

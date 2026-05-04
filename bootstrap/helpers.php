@@ -98,6 +98,16 @@ function debt_status_options(): array
     return ['safe', 'warning', 'danger'];
 }
 
+function debt_type_options(): array
+{
+    return [
+        'general'     => 'Umum',
+        'credit_card' => 'Kartu Kredit',
+        'installment' => 'Hutang Bank Cicilan',
+        'overdraft'   => 'Rekening Koran / Overdraft',
+    ];
+}
+
 function format_idr(int|float $amount): string
 {
     return 'Rp ' . number_format((float) $amount, 0, ',', '.');

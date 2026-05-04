@@ -404,33 +404,95 @@ class MysqlFinanceRepository
 
     public function debts(): array
     {
-        $bookExpr = $this->hasColumn('debts', 'book_id') ? 'COALESCE(book_id, 0)' : '0';
-        return $this->pdo->query("SELECT id, {$bookExpr} AS book_id, name, due_label AS due, amount, status FROM debts ORDER BY id DESC LIMIT 10")->fetchAll() ?: [];
+        $bookExpr     = $this->hasColumn('debts', 'book_id')   ? 'COALESCE(book_id, 0)'             : '0';
+        $typeExpr     = $this->hasColumn('debts', 'debt_type') ? "COALESCE(debt_type, 'general')"   : "'general'";
+        $ccLastFour   = $this->hasColumn('debts', 'cc_last_four')        ? 'cc_last_four'        : 'NULL';
+        $ccExpiry     = $this->hasColumn('debts', 'cc_expiry')           ? 'cc_expiry'           : 'NULL';
+        $ccBillingDay = $this->hasColumn('debts', 'cc_billing_day')      ? 'cc_billing_day'      : 'NULL';
+        $ccDueDay     = $this->hasColumn('debts', 'cc_due_day')          ? 'cc_due_day'          : 'NULL';
+        $loanPrincipal   = $this->hasColumn('debts', 'loan_principal')     ? 'loan_principal'     : 'NULL';
+        $loanInstallment = $this->hasColumn('debts', 'loan_installment')   ? 'loan_installment'   : 'NULL';
+        $loanTenure      = $this->hasColumn('debts', 'loan_tenure_months') ? 'loan_tenure_months' : 'NULL';
+        $loanPaid        = $this->hasColumn('debts', 'loan_paid_months')   ? 'loan_paid_months'   : 'NULL';
+        $loanDueDay      = $this->hasColumn('debts', 'loan_due_day')       ? 'loan_due_day'       : 'NULL';
+        $interestRate    = $this->hasColumn('debts', 'interest_rate')      ? 'interest_rate'      : 'NULL';
+        $odStart         = $this->hasColumn('debts', 'od_usage_start_date') ? 'od_usage_start_date' : 'NULL';
+        $odDueDate       = $this->hasColumn('debts', 'od_due_date')        ? 'od_due_date'        : 'NULL';
+
+        $sql = "SELECT id, {$bookExpr} AS book_id, {$typeExpr} AS debt_type,
+                       name, due_label AS due, amount, status,
+                       {$ccLastFour} AS cc_last_four, {$ccExpiry} AS cc_expiry,
+                       {$ccBillingDay} AS cc_billing_day, {$ccDueDay} AS cc_due_day,
+                       {$loanPrincipal} AS loan_principal, {$loanInstallment} AS loan_installment,
+                       {$loanTenure} AS loan_tenure_months, {$loanPaid} AS loan_paid_months,
+                       {$loanDueDay} AS loan_due_day,
+                       {$interestRate} AS interest_rate,
+                       {$odStart} AS od_usage_start_date, {$odDueDate} AS od_due_date
+                FROM debts ORDER BY id DESC LIMIT 50";
+
+        return $this->pdo->query($sql)->fetchAll() ?: [];
     }
 
     public function createDebt(array $payload): array
     {
-        $columns = ['name', 'due_label', 'amount', 'status'];
+        $columns      = ['name', 'due_label', 'amount', 'status'];
         $placeholders = [':name', ':due', ':amount', ':status'];
-        $params = ['name' => $payload['name'], 'due' => $payload['due'], 'amount' => $payload['amount'], 'status' => $payload['status']];
+        $params       = ['name' => $payload['name'], 'due' => $payload['due'], 'amount' => $payload['amount'], 'status' => $payload['status']];
+
         if ($this->hasColumn('debts', 'book_id')) {
-            $columns[] = 'book_id';
-            $placeholders[] = ':book_id';
+            $columns[] = 'book_id'; $placeholders[] = ':book_id';
             $params['book_id'] = max(0, (int) ($payload['book_id'] ?? 0));
         }
-        $statement = $this->pdo->prepare('INSERT INTO debts (' . implode(', ', $columns) . ') VALUES (' . implode(', ', $placeholders) . ') RETURNING id, name, due_label AS due, amount, status');
+        if ($this->hasColumn('debts', 'debt_type')) {
+            $columns[] = 'debt_type'; $placeholders[] = ':debt_type';
+            $params['debt_type'] = $payload['debt_type'] ?? 'general';
+        }
+        foreach (['cc_last_four', 'cc_expiry', 'cc_billing_day', 'cc_due_day'] as $col) {
+            if ($this->hasColumn('debts', $col)) {
+                $columns[] = $col; $placeholders[] = ':' . $col;
+                $params[$col] = $payload[$col] ?? null;
+            }
+        }
+        foreach (['loan_principal', 'loan_installment', 'loan_tenure_months', 'loan_paid_months', 'loan_due_day'] as $col) {
+            if ($this->hasColumn('debts', $col)) {
+                $columns[] = $col; $placeholders[] = ':' . $col;
+                $params[$col] = $payload[$col] ?? null;
+            }
+        }
+        if ($this->hasColumn('debts', 'interest_rate')) {
+            $columns[] = 'interest_rate'; $placeholders[] = ':interest_rate';
+            $params['interest_rate'] = $payload['interest_rate'] ?? null;
+        }
+        foreach (['od_usage_start_date', 'od_due_date'] as $col) {
+            if ($this->hasColumn('debts', $col)) {
+                $columns[] = $col; $placeholders[] = ':' . $col;
+                $params[$col] = $payload[$col] ?? null;
+            }
+        }
+
+        $statement = $this->pdo->prepare('INSERT INTO debts (' . implode(', ', $columns) . ') VALUES (' . implode(', ', $placeholders) . ') RETURNING id');
         $statement->execute($params);
         return $statement->fetch() ?: [];
     }
 
     public function updateDebt(int $debtId, array $payload): bool
     {
-        $sets = ['name = :name', 'due_label = :due', 'amount = :amount', 'status = :status'];
+        $sets   = ['name = :name', 'due_label = :due', 'amount = :amount', 'status = :status'];
         $params = ['id' => $debtId, 'name' => $payload['name'], 'due' => $payload['due'], 'amount' => $payload['amount'], 'status' => $payload['status']];
+
         if ($this->hasColumn('debts', 'book_id') && array_key_exists('book_id', $payload)) {
             $sets[] = 'book_id = :book_id';
             $params['book_id'] = max(0, (int) $payload['book_id']);
         }
+        foreach (['debt_type', 'cc_last_four', 'cc_expiry', 'cc_billing_day', 'cc_due_day',
+                  'loan_principal', 'loan_installment', 'loan_tenure_months', 'loan_paid_months', 'loan_due_day',
+                  'interest_rate', 'od_usage_start_date', 'od_due_date'] as $col) {
+            if ($this->hasColumn('debts', $col)) {
+                $sets[]       = "{$col} = :{$col}";
+                $params[$col] = $payload[$col] ?? null;
+            }
+        }
+
         $statement = $this->pdo->prepare('UPDATE debts SET ' . implode(', ', $sets) . ' WHERE id = :id');
         $statement->execute($params);
         return $statement->rowCount() > 0;

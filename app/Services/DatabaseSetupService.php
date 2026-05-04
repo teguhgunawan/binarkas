@@ -162,6 +162,25 @@ class DatabaseSetupService
                     "DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE table_schema = current_schema() AND table_name = 'debts' AND constraint_name = 'fk_debts_book') THEN ALTER TABLE debts ADD CONSTRAINT fk_debts_book FOREIGN KEY (book_id) REFERENCES books(id); END IF; END $$"
                 ],
             ],
+            [
+                'id' => '20260504_0009_debts_type_expansion',
+                'statements' => [
+                    "DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = 'debts' AND column_name = 'debt_type') THEN ALTER TABLE debts ADD COLUMN debt_type VARCHAR(30); END IF; END $$",
+                    "UPDATE debts SET debt_type = 'general' WHERE debt_type IS NULL",
+                    "DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = 'debts' AND column_name = 'cc_last_four') THEN ALTER TABLE debts ADD COLUMN cc_last_four VARCHAR(4); END IF; END $$",
+                    "DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = 'debts' AND column_name = 'cc_expiry') THEN ALTER TABLE debts ADD COLUMN cc_expiry VARCHAR(7); END IF; END $$",
+                    "DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = 'debts' AND column_name = 'cc_billing_day') THEN ALTER TABLE debts ADD COLUMN cc_billing_day SMALLINT; END IF; END $$",
+                    "DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = 'debts' AND column_name = 'cc_due_day') THEN ALTER TABLE debts ADD COLUMN cc_due_day SMALLINT; END IF; END $$",
+                    "DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = 'debts' AND column_name = 'loan_principal') THEN ALTER TABLE debts ADD COLUMN loan_principal NUMERIC(18,2); END IF; END $$",
+                    "DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = 'debts' AND column_name = 'loan_installment') THEN ALTER TABLE debts ADD COLUMN loan_installment NUMERIC(18,2); END IF; END $$",
+                    "DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = 'debts' AND column_name = 'loan_tenure_months') THEN ALTER TABLE debts ADD COLUMN loan_tenure_months SMALLINT; END IF; END $$",
+                    "DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = 'debts' AND column_name = 'loan_paid_months') THEN ALTER TABLE debts ADD COLUMN loan_paid_months SMALLINT; END IF; END $$",
+                    "DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = 'debts' AND column_name = 'loan_due_day') THEN ALTER TABLE debts ADD COLUMN loan_due_day SMALLINT; END IF; END $$",
+                    "DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = 'debts' AND column_name = 'interest_rate') THEN ALTER TABLE debts ADD COLUMN interest_rate NUMERIC(7,4); END IF; END $$",
+                    "DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = 'debts' AND column_name = 'od_usage_start_date') THEN ALTER TABLE debts ADD COLUMN od_usage_start_date DATE; END IF; END $$",
+                    "DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = 'debts' AND column_name = 'od_due_date') THEN ALTER TABLE debts ADD COLUMN od_due_date DATE; END IF; END $$",
+                ],
+            ],
         ];
     }
 
